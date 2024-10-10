@@ -756,7 +756,7 @@ Proof.
     
   
   
-Admitted. (* probaly induction on Gl, base case ok, should be movable into everything later *)
+Admitted. 
 
 
 Lemma in_some_implies_onth {A} : forall (x : A) xs,
@@ -901,21 +901,59 @@ Proof.
     specialize(IHk s ys g' ys0 r). apply IHk; try easy.
 Qed.
 
-Lemma subst_parts_depth : forall m n k r g Q,
-      subst_global m n (g_rec g) g Q -> 
-      isgParts_depth k r g -> 
+Lemma subst_parts_helper : forall k0 xs s g0 r n0 lis m n g,
+      onth k0 xs = Some (s, g0) -> 
+      isgParts_depth n0 r g0 ->
+      Forall2
+       (fun u v : option (sort * global) =>
+        u = None /\ v = None \/
+        (exists (s : sort) (g0 g' : global),
+           u = Some (s, g0) /\ v = Some (s, g') /\ subst_global m n (g_rec g) g0 g')) xs lis -> 
+      Forall
+      (fun u : option (sort * global) =>
+       u = None \/
+       (exists (s : sort) (g : global),
+          u = Some (s, g) /\
+          (forall (m n k : fin) (r : string) (g0 g' : global),
+           isgParts_depth k r g' -> subst_global m n (g_rec g0) g' g -> isgParts_depth k r g))) lis -> 
+      exists g', onth k0 lis = Some (s, g') /\ isgParts_depth n0 r g'.
+Proof.
+  induction k0; intros; try easy.
+  - destruct xs; try easy.
+    simpl in H. subst. destruct lis; try easy. inversion H1. subst. clear H1. inversion H2. subst. clear H2.
+    clear H4 H7. destruct H5; try easy. destruct H. destruct H. destruct H. destruct H.
+    destruct H1. inversion H. subst.
+    destruct H3; try easy. destruct H1. destruct H1. destruct H1. inversion H1. subst.
+    specialize(H3 m n n0 r g x0 H0 H2).
+    exists x3. split; try easy.
+  - destruct xs; try easy. destruct lis; try easy. inversion H1. subst. clear H1. inversion H2. subst. clear H2.
+    specialize(IHk0 xs s g0 r n0 lis m n g). apply IHk0; try easy.
+Qed.
+
+Lemma subst_parts_depth : forall m n k r g g' Q,
+      subst_global m n (g_rec g) g' Q -> 
+      isgParts_depth k r g' -> 
       isgParts_depth k r Q.
 Proof.
-  intros. revert H0 H. revert m n k r g.
+  intros. revert H0 H. revert m n k r g g'.
   induction Q using global_ind_ref; intros; try easy.
-  inversion H. 
+  inversion H.
   - subst. inversion H0; try easy.
   - subst. inversion H0; try easy. 
   - subst. inversion H0; try easy.
   - inversion H. subst. inversion H0. 
-  - inversion H1. subst.  
-    
-Admitted.
+  - inversion H1. subst.
+    inversion H0. 
+    - subst. constructor.
+    - subst. constructor.
+    - subst. 
+      specialize(subst_parts_helper k0 xs s g0 r n0 lis m n g H10 H11 H7 H); intros. 
+      destruct H2. destruct H2.
+      apply dpth_c with (n := n0) (s := s) (g := x) (k := k0); try easy.
+  - inversion H. subst. inversion H0. 
+  - subst. inversion H0. subst.
+    constructor. specialize(IHQ m.+1 n.+1 n0 r g P). apply IHQ; try easy.
+Qed.
 
 Lemma pmergeCR: forall G r,
           wfgC G ->
@@ -946,7 +984,7 @@ Proof. intros.
     - subst.
       pinversion H1; try easy. subst.
       specialize(IHn G r Q). apply IHn; try easy.
-      specialize(subst_parts_depth 0 0 n r g Q); intros. apply H; try easy.
+      specialize(subst_parts_depth 0 0 n r g g Q); intros. apply H; try easy.
       apply gttT_mon.
     - subst.
       pinversion H1; try easy. subst.
