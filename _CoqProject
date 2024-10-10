@@ -1,0 +1,18 @@
+-R . SST
+
+src/expressions.v
+src/header.v
+type/local.v
+type/global.v
+type/isomorphism.v
+type/merge.v
+type/projection.v
+type/proj_sub.v
+process/processes.v
+process/typecheck.v
+process/inversion.v
+process/inversion_expr.v
+process/substitution.v
+process/sessions.v
+process/beta.v
+process/subject_reduction.v
