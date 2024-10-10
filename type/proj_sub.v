@@ -54,14 +54,6 @@ Proof.
   left. easy.
 Qed.
 
-Lemma ishParts_hxs : forall [p s1 s2 o1 xs0],
-    (ishParts p (gtth_send s1 s2 (o1 :: xs0)) -> False) ->
-    (ishParts p (gtth_send s1 s2 xs0) -> False).
-Proof.
-  intros. apply H.
-  inversion H0. subst. apply ha_sendp. apply ha_sendq.
-  subst. apply ha_sendr with (n := Nat.succ n) (s := s) (g := g); try easy.
-Qed.
 
 Lemma ishParts_x : forall [p s1 s2 o1 o2 xs0],
     (ishParts p (gtth_send s1 s2 (Some (o1,o2) :: xs0)) -> False) ->
@@ -76,26 +68,6 @@ Proof.
     assert (p <> s2). apply eqb_neq; try easy.
     apply ha_sendr with (n := 0) (s := o1) (g := o2); try easy.
 Qed.
-
-Lemma ishParts_n : forall [n p s s' xs s0 g],
-    (ishParts p (gtth_send s s' xs) -> False) ->
-    onth n xs = Some(s0, g) -> 
-    (ishParts p g -> False).
-Proof.  
-  induction n; intros; try easy.
-  - apply H. destruct xs; try easy. simpl in *. subst.
-    - case_eq (eqb p s); intros.
-      assert (p = s). apply eqb_eq; try easy. subst. apply ha_sendp.
-    - case_eq (eqb p s'); intros.
-      assert (p = s'). apply eqb_eq; try easy. subst. apply ha_sendq.
-    - assert (p <> s). apply eqb_neq; try easy. 
-      assert (p <> s'). apply eqb_neq; try easy.
-      apply ha_sendr with (n := 0) (s := s0) (g := g); try easy.
-  - destruct xs; try easy.
-    specialize(ishParts_hxs H); intros.
-    specialize(IHn p s s' xs s0 g). apply IHn; try easy.
-Qed.
-
 
 Lemma isgParts_xs : forall [s s' x o p],
     isgParts p (g_send s s' x) ->

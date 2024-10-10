@@ -378,6 +378,45 @@ Proof.
 Qed.
 
 
+Lemma gttTC_after_subst : forall G G' G1,
+    multiS betaG G G' -> 
+    gttTC G G1 ->
+    gttTC G' G1.
+Proof.
+  intros. revert H0. revert G1. induction H; intros.
+  - inversion H. subst.
+    pinversion H0. subst.
+    specialize(subst_injG 0 0 (g_rec G) G y Q H3 H1); intros. subst.
+    easy.
+    apply gttT_mon.
+  - apply IHmultiS. inversion H. subst.
+    pinversion H1. subst.
+    specialize(subst_injG 0 0 (g_rec G) G y Q H4 H2); intros. subst.
+    easy.
+    apply gttT_mon.
+Qed.
+
+Lemma guard_breakG_s : forall Gl G,
+      gttTC Gl G -> 
+      (forall n : fin, exists m : fin, guardG n m Gl) -> 
+      exists T : global,
+        (forall n : fin, exists m : fin, guardG n m T) /\
+        (T = g_end \/
+         (exists (p q : string) (lis : seq.seq (option (sort * global))), T = g_send p q lis)) /\
+         gttTC T G.
+Proof.
+  intros. pinversion H; try easy.
+  - subst. exists g_end. split; try easy. split; try easy. left. easy. pfold. constructor.
+  - subst. exists (g_send p q xs). split; try easy. split.
+    right. exists p. exists q. exists xs. easy. pfold. easy.
+  - subst.
+    specialize(guard_breakG G0 H0); intros. destruct H3.
+    exists x. destruct H3. destruct H4. split; try easy.
+    split; try easy.
+    specialize(gttTC_after_subst (g_rec G0) x G); intros. apply H6; try easy. pfold. easy.
+  apply gttT_mon.
+Qed.
+
 End gtt.
 
 
