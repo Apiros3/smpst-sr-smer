@@ -67,7 +67,36 @@ Fixpoint onth {A : Type} (n : fin) (lis : list (option A)) : option A :=
         | []    => None
       end
   end.
-  
+
+Lemma slist_implies_some {A} : forall (lis : list (option A)), SList lis -> exists n G, 
+  onth n lis = Some G.
+Proof.
+  induction lis; intros; try easy.
+  specialize(SList_f a lis H); intros.
+  destruct H0. specialize(IHlis H0). destruct IHlis. exists (S x). easy.
+  destruct H0. destruct H1. subst. exists 0. exists x. easy.
+Qed.
+
+Lemma some_onth_implies_In {A} : forall n (ctxG : list (option A)) G,
+    onth n ctxG = Some G -> In (Some G) ctxG.
+Proof.
+  induction n; intros; try easy.
+  - destruct ctxG; try easy. simpl in *.
+    left. easy.
+  - destruct ctxG; try easy. simpl in *.
+    right. apply IHn; try easy.
+Qed.
+
+Lemma in_some_implies_onth {A} : forall (x : A) xs,
+    In (Some x) xs -> exists n, onth n xs = Some x.
+Proof.
+  intros. revert H. revert x. 
+  induction xs; intros; try easy.
+  simpl in *. destruct H. exists 0. easy.
+  specialize(IHxs x H). destruct IHxs. exists (Nat.succ x0). easy.
+Qed.
+
+
 Lemma triad_le :  forall m t',
                   is_true (ssrnat.leq m t') ->
                   is_true (ssrnat.leq (S t') m) -> False.
