@@ -901,12 +901,20 @@ Proof.
     specialize(IHk s ys g' ys0 r). apply IHk; try easy.
 Qed.
 
-Lemma subst_parts_depth : forall m n k r g g' Q,
-      subst_global m n (g_rec g) g' Q -> 
+Lemma subst_parts_depth : forall m n k r g Q,
+      subst_global m n (g_rec g) g Q -> 
       isgParts_depth k r g -> 
       isgParts_depth k r Q.
 Proof.
-  intros. revert H0. 
+  intros. revert H0 H. revert m n k r g.
+  induction Q using global_ind_ref; intros; try easy.
+  inversion H. 
+  - subst. inversion H0; try easy.
+  - subst. inversion H0; try easy. 
+  - subst. inversion H0; try easy.
+  - inversion H. subst. inversion H0. 
+  - inversion H1. subst.  
+    
 Admitted.
 
 Lemma pmergeCR: forall G r,
@@ -938,7 +946,7 @@ Proof. intros.
     - subst.
       pinversion H1; try easy. subst.
       specialize(IHn G r Q). apply IHn; try easy.
-      specialize(subst_parts_depth 0 0 n r g g Q); intros. apply H; try easy.
+      specialize(subst_parts_depth 0 0 n r g Q); intros. apply H; try easy.
       apply gttT_mon.
     - subst.
       pinversion H1; try easy. subst.

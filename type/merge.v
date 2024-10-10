@@ -76,7 +76,7 @@ Lemma merge_inv_s : forall l ys T' T,
       onth l ys = Some T' -> 
       isMerge T ys -> 
       merges_at_n 0 T' T.
-Admitted.
+Admitted. 
 
 
 Lemma merge_from_less : forall T ys3 x,
@@ -131,7 +131,7 @@ Admitted.
 Lemma merge2I_fst: forall l T p xs ys zs,
   merge2 (ltt_recv p xs) (ltt_recv p ys) (ltt_recv p zs) ->
   onth l zs = Some T ->
-  onth l xs = Some T \/  onth l xs = None.
+  onth l xs = Some T \/ onth l xs = None.
 Proof. intro l.
        (* induction l; intros.
        - inversion H. subst. left. easy.
