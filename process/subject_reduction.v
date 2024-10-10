@@ -167,8 +167,10 @@ Proof.
     assert(exists T'0 : ltt, projectionC G' s T'0 /\ (exists n : fin, merges_at_n n T'0 T')).
     apply H13; try easy.
     clear H13.
-    destruct H14. exists x3. split; try easy. destruct H13. clear H13 H12 H10. clear x x0 x1 x2.
-    rename x3 into Tl. destruct H14. rename x into n.
+    destruct H14. exists x3. split; try easy. destruct H13. rename x3 into Tl. 
+    
+    clear H13 H12 H10. clear x x0 x1 x2.
+    destruct H14. rename x into n.
     clear H0 H1 H2 H3 H4 H5 H6 H9 H11 H7 H. clear s p0 q G G' l L1 L2 S T. clear xs y.
     apply tc_sub with (t := T'); try easy.
     apply merges_at_to_subtype with (n := n); try easy.

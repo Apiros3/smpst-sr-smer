@@ -55,6 +55,7 @@ Proof.
 Qed.
 
 
+
 Lemma ishParts_x : forall [p s1 s2 o1 o2 xs0],
     (ishParts p (gtth_send s1 s2 (Some (o1,o2) :: xs0)) -> False) ->
     (ishParts p o2 -> False).
@@ -1580,8 +1581,8 @@ Proof.
   destruct H3.
   - destruct H. subst. exists x0.
     inversion H0.
-    - subst. constructor. inversion H. subst. constructor. subst. constructor. constructor; try easy. left. easy.
-    - subst. constructor. constructor; try easy. left. easy.
+    - subst. constructor. inversion H. subst. constructor. subst. constructor. constructor; try easy. left. easy. easy.
+    - subst. constructor. constructor; try easy. left. easy. easy.
   - destruct H. destruct H. destruct H. destruct H. destruct H1. destruct H2. subst.
     exists (Nat.max (S x4) (S x0)). constructor. constructor.
     right. exists x1. exists x3. exists x2. split. easy. split. easy. exists x4. split; try easy.
@@ -1595,16 +1596,27 @@ Proof.
         specialize(Nat.le_max_r (S x4) 1); intros. easy. left. easy.
         subst. 
       - subst.
-        revert H3. apply Forall2R_mono; intros. 
+        revert H5. apply Forall2R_mono; intros. 
         destruct H1. left. easy. subst. destruct y. right. destruct p. exists s. exists l. exists l. 
         split. easy. split. easy. exists 0. split; try easy. constructor. constructor.
         specialize(Nat.le_max_r (S x4) 1); intros. easy. left. easy.
         subst.
-        revert H3. apply Forall2R_mono; intros.
+        revert H5. apply Forall2R_mono; intros.
         destruct H. left. easy. destruct H. destruct H. destruct H. destruct H. destruct H1. destruct H3. destruct H3.
         subst. right. exists x6. exists x7. exists x8. split. easy. split. easy. exists x9. split; try easy.
         apply Nat.lt_trans with (m := x0); try easy.
         specialize(Nat.le_max_r (S x4) (S x0)); intros. easy.
+        
+        inversion H0. subst.
+        - inversion H. subst. easy.
+        - subst. intros.
+          specialize(SList_f (Some (x1, x2)) ys3 H1); intros. destruct H3.
+          - apply SList_b. apply H6; try easy.
+          - destruct H3. destruct H4. inversion H4. subst. destruct x; try easy.
+        - subst. intros.
+          specialize(SList_f (Some (x1, x2)) ys3 H); intros. destruct H1.
+          - apply SList_b. apply H6; try easy.
+          - destruct H1. destruct H3. inversion H3. subst. destruct x; try easy.
 Qed.
 
 Lemma _3_19_3_helper_h6 : forall ys ys2 ys3 r p q l,
@@ -1663,6 +1675,39 @@ Proof.
       constructor; try easy. right. exists x2. exists x0. split. easy. split. easy. easy.
 Qed.
 
+Lemma _3_19_3_helper_h7s : forall x x0 IJ0,
+              Forall3S
+                (fun u v w : option (sort * ltt) =>
+                 u = None /\ v = None /\ w = None \/
+                 (exists t : sort * ltt, u = None /\ v = Some t /\ w = Some t) \/
+                 (exists t : sort * ltt, u = Some t /\ v = None /\ w = Some t) \/
+                 (exists t : sort * ltt, u = Some t /\ v = Some t /\ w = Some t)) x x0 IJ0 ->
+              SList x -> 
+              SList x0 -> 
+              SList IJ0.
+Proof.
+  intros x x0 IJ0. revert x x0. 
+  induction IJ0; intros; try easy. destruct x; try easy. 
+  inversion H. subst. easy. subst. easy.
+  subst. clear H.
+  specialize(IHIJ0 xa xb H8).
+  specialize(SList_f a0 xa H0); intros.
+  destruct H.
+  - specialize(SList_f b xb H1); intros.
+    destruct H2.
+    - apply SList_b. apply IHIJ0; try easy.
+    - destruct H2. destruct H3. subst. inversion H8. subst. easy. subst. apply SList_b. easy.
+  - destruct H. destruct H2. subst.
+    inversion H8. subst.
+    specialize(SList_f b IJ0 H1); intros. destruct H. apply SList_b. easy.
+    destruct H. destruct H2. subst. 
+    destruct H7; try easy. destruct H. destruct H. destruct H. easy. destruct H. destruct H. easy.
+    destruct H. destruct H. destruct H2. inversion H. inversion H2. subst. easy.
+    subst. destruct H7; try easy. destruct H. destruct H. easy. destruct H. destruct H.
+    destruct H. destruct H2. subst. easy.
+    destruct H. destruct H. destruct H2. subst. easy. 
+Qed.
+
 Lemma _3_19_3_helper_h7 : forall ys3 x T T',
       isMerge T ys3 -> 
       isMerge T' x -> 
@@ -1701,16 +1746,19 @@ Proof.
       inversion H9. subst. exists n. easy.
       subst.
       exists (Nat.max n n'). 
-      specialize(merges_at_recv_inv ys p T n' H3); intros. destruct H0. destruct H0. subst.
+      specialize(merges_at_recv_inv ys p T n' H3); intros. destruct H4. destruct H4. subst.
       specialize(merges_at_recv_inv2 xs x p n H1); intros.
-      clear H1 H3. clear H8 H9.
-      constructor. 
-      revert H H2 H0. revert n x ys xs n'. clear p.
+      assert (SList IJ). 
+      {
+        specialize(_3_19_3_helper_h7s xs ys IJ); intros. apply H6; try easy.
+      }
+      constructor; try easy. clear H2 H0 H6. clear H1 H3 H8 H9. 
+      revert H H5 H4. revert n x ys xs n'. clear p.
       induction IJ; intros; try easy.
       - destruct ys; try easy. destruct xs; try easy. constructor.
       - destruct xs; try easy. destruct ys; try easy.
         - destruct x; try easy. inversion H. subst. 
-          inversion H2. subst. clear H2.
+          inversion H5. subst. clear H5.
           specialize(IHIJ n x IJ nil n').
           assert(Forall2R
          (fun u v : option (sort * ltt) =>
@@ -1720,12 +1768,12 @@ Proof.
              v = Some (s, t') /\ (exists k : fin, merges_at_n k t t' /\ k < Nat.max n n'))) IJ x).
           apply IHIJ; try easy. constructor. constructor. constructor; try easy.
           clear H0 IHIJ H.
-          destruct H5. left. easy. destruct H. destruct H. destruct H. destruct H. destruct H0. destruct H2. destruct H2.
+          destruct H3. left. easy. destruct H. destruct H. destruct H. destruct H. destruct H0. destruct H1. destruct H1.
           subst. right. exists x0. exists x1. exists x2. split. easy. split. easy.
           exists x3. split; try easy.
           specialize(Nat.le_max_r n n'); intros. apply Nat.le_trans with (m := n'); try easy.
         destruct x; try easy. destruct ys; try easy.
-        - inversion H. subst. inversion H0. subst. clear H0.
+        - inversion H. subst. inversion H4. subst. clear H4.
           specialize(IHIJ n x nil IJ n').
           assert(Forall2R
          (fun u v : option (sort * ltt) =>
@@ -1734,11 +1782,11 @@ Proof.
              u = Some (s, t) /\
              v = Some (s, t') /\ (exists k : fin, merges_at_n k t t' /\ k < Nat.max n n'))) IJ x).
           apply IHIJ; try easy. constructor. constructor. constructor; try easy.
-          destruct H5. left. easy. destruct H1. destruct H1. destruct H1. destruct H1. destruct H3.
-          destruct H4. subst. destruct H4.
+          destruct H3. left. easy. destruct H1. destruct H1. destruct H1. destruct H1. destruct H2.
+          destruct H3. subst. destruct H3.
           right. exists x0. exists x1. exists x2. split. easy. split. easy. exists x3. split. easy.
           specialize(Nat.le_max_l n n'); intros. apply Nat.le_trans with (m := n); try easy.
-        - inversion H. subst. clear H. inversion H0. subst. clear H0. inversion H2. subst. clear H2.
+        - inversion H. subst. clear H. inversion H5. subst. clear H5. inversion H4. subst. clear H4.
           specialize(IHIJ n x ys xs n').
           assert(Forall2R
          (fun u v : option (sort * ltt) =>
@@ -1749,156 +1797,197 @@ Proof.
           apply IHIJ; try easy. constructor; try easy. clear H H8 H7 H10 IHIJ.
           destruct H6. left. easy.
           destruct H.
-          - destruct H. destruct H. destruct H0. subst. destruct H3; try easy.
+          - destruct H. destruct H. destruct H0. subst. destruct H2; try easy.
             destruct H. destruct H. destruct H. destruct H. destruct H0. destruct H1. destruct H1.
             inversion H. subst. right. exists x1. exists x2. exists x3. split. easy. split. easy.
             exists x4. split; try easy.
             specialize(Nat.le_max_r n n'); intros. apply Nat.le_trans with (m := n'); try easy.
           - destruct H. destruct H. destruct H. destruct H0. subst.
-            destruct H4; try easy. destruct H. destruct H. destruct H. destruct H.
+            destruct H3; try easy. destruct H. destruct H. destruct H. destruct H.
             destruct H0. destruct H1. inversion H. subst. right.
             exists x1. exists x2. exists x3. split. easy. split. easy. exists x4. split; try easy.
             destruct H1.
             specialize(Nat.le_max_l n n'); intros. apply Nat.le_trans with (m := n); try easy.
           - destruct H. destruct H. destruct H0. subst. 
-            destruct H4; try easy. destruct H. destruct H. destruct H. destruct H. destruct H0. destruct H1. destruct H1. inversion H. subst.
+            destruct H2; try easy. destruct H. destruct H. destruct H. destruct H. destruct H0. destruct H1. destruct H1. inversion H. subst.
             destruct H3; try easy. destruct H0. destruct H0. destruct H0. destruct H0. destruct H3. destruct H4. destruct H4. inversion H0. inversion H3. subst. clear H0 H3 H. right.
             exists x0. exists x5. exists x6. split. easy. split. easy. exists x4. split; try easy.
-            specialize(Nat.le_max_l n n'); intros. apply Nat.le_trans with (m := n); try easy.
+            specialize(Nat.le_max_r n n'); intros. apply Nat.le_trans with (m := n'); try easy.
       - subst.
-        specialize(merges_at_recv_inv3 xs p t n H1); intros. destruct H0. destruct H0. subst.
-        specialize(merges_at_recv_inv3 ys p tl n' H3); intros. destruct H0. destruct H0. subst.
-        specialize(merge2_at_recv_inv x x0 p T' H9); intros. destruct H0. rename x1 into IJ'. destruct H0. subst.
-        rename x into xs'. rename x0 into ys'.
-        exists (Nat.max n n'). constructor. 
-        clear H1 H9 H8 H3. revert H H2 H4 H5. clear p. revert ys ys' xs xs' IJ n n'.
-        induction IJ'; intros; try easy. constructor.
-        destruct xs'; try easy.
-        - inversion H5; try easy. subst. clear H5. destruct ys; try easy. destruct xs; try easy.
-          inversion H. subst. clear H.
-          inversion H4. subst. clear H4.
-          specialize(IHIJ' ys IJ' nil nil ys n n').
-          assert(Forall2R
-          (fun u v : option (sort * ltt) =>
-           u = None \/
-           (exists (s : sort) (t t' : ltt),
-              u = Some (s, t) /\
-              v = Some (s, t') /\ (exists k : fin, merges_at_n k t t' /\ k < Nat.max n n'))) IJ'
-          ys). apply IHIJ'; try easy. constructor. constructor. constructor; try easy.
-          clear H H6 H2 IHIJ'.
-          destruct H3. left. easy. destruct H. destruct H. destruct H. destruct H. destruct H0. destruct H1.
-          destruct H1. subst. right. exists x. exists x0. exists x1. split. easy. split. easy.
-          exists x2. split; try easy.
-          specialize(Nat.le_max_r n n'); intros. apply Nat.le_trans with (m := n'); try easy.
-        - destruct IJ; try easy. clear H2. inversion H4. inversion H. subst. clear H H4.
-          specialize(IHIJ' ys IJ' xs nil IJ n n').
-          assert(Forall2R
-          (fun u v : option (sort * ltt) =>
-           u = None \/
-           (exists (s : sort) (t t' : ltt),
-              u = Some (s, t) /\
-              v = Some (s, t') /\ (exists k : fin, merges_at_n k t t' /\ k < Nat.max n n'))) IJ'
-          IJ). apply IHIJ'; try easy. constructor. constructor. constructor; try easy.
-          clear H H15 H6 IHIJ'.
-          destruct H3. left. easy. destruct H. destruct H. destruct H. destruct H. destruct H0. destruct H1.
-          destruct H1. subst.
-          right. exists x. exists x0.
-          destruct H11; try easy. destruct H; try easy.
-          - destruct H. destruct H. destruct H0. inversion H0. subst. exists x1. split. easy. split. easy.
-            exists x2. split; try easy.
+        specialize(merges_at_recv_inv3 xs p t n H1); intros. destruct H4. destruct H4. subst.
+        specialize(merges_at_recv_inv3 ys p tl n' H3); intros. destruct H4. destruct H4. subst.
+        inversion H9; try easy.
+        - subst. 
+          assert(SList x0). 
+          {
+            inversion H1. subst. 
+            - inversion H4. subst. easy.
+            - subst. apply H13; try easy.
+            - subst. apply H13; try easy.
+          }
+          exists (Nat.max n n'). 
+          constructor; try easy.
+          clear H4 H2 H0 H1 H9 H8 H3. clear p. revert H6 H5 H. revert n' n ys xs IJ.
+          induction x0; intros; try easy.
+          - constructor.
+          - destruct xs; try easy. destruct ys; try easy. destruct IJ; try easy.
+            inversion H. subst. clear H.
+            inversion H6. subst. clear H6. inversion H5. subst. clear H5.
+            specialize(IHx0 n' n ys xs IJ).
+            assert(Forall2R
+         (fun u v : option (sort * ltt) =>
+          u = None \/
+          (exists (s : sort) (t t' : ltt),
+             u = Some (s, t) /\
+             v = Some (s, t') /\ (exists k : fin, merges_at_n k t t' /\ k < Nat.max n n'))) x0 IJ).
+            apply IHx0; try easy. constructor; try easy.
+            clear H H8 H7 H10 IHx0.
+            destruct H3. left. easy.
+            destruct H. destruct H. destruct H. destruct H. destruct H0. destruct H1. destruct H1.
+            subst. right.
+            destruct H2; try easy. destruct H. destruct H. destruct H. destruct H. destruct H0.
+            destruct H2. destruct H2. inversion H. subst.
+            exists x4. exists x5. 
+            destruct H4; try easy. destruct H0. destruct H0. destruct H0. easy.
+            destruct H0. destruct H0. destruct H0. destruct H4. easy.
+            destruct H0. destruct H0. destruct H4. inversion H4. inversion H0. subst. inversion H9. subst.
+            exists x6. split. easy. split. easy. exists x7. split; try easy.
             specialize(Nat.le_max_r n n'); intros. apply Nat.le_trans with (m := n'); try easy.
-          - destruct H; try easy. destruct H. destruct H. destruct H0. easy.
-            destruct H. destruct H. destruct H0. inversion H0. subst.
-            exists x1. split. easy. split. easy. exists x2.
-            split; try easy.
-            specialize(Nat.le_max_r n n'); intros. apply Nat.le_trans with (m := n'); try easy.
-        - destruct xs; try easy. destruct ys'.
-          inversion H5; try easy. subst. destruct IJ; try easy.
-          destruct ys.
-          - inversion H. subst.
-            specialize(IHIJ' nil nil IJ IJ' IJ n n').
-            inversion H2. subst. clear H2.
-            assert(Forall2R
+          - subst.
+            assert(SList IJ0). 
+            {
+              specialize(_3_19_3_helper_h7s x x0 IJ0); intros. apply H4; try easy.
+            }
+            exists (Nat.max n n').
+            constructor; try easy. clear H4 H14 H12 H0 H2.
+            clear H1 H9 H8 H3. clear p. 
+            revert H11 H6 H5 H. rename IJ0 into IJ'. rename x0 into ys'. rename x into xs'. 
+            revert n' n ys ys' xs IJ xs'. induction IJ'; intros; try easy.
+            constructor.
+            inversion H11. subst.
+            - clear H5 H11. destruct ys; try easy. inversion H6. subst. clear H6.
+              inversion H. subst.
+              specialize(IHIJ' n' n ys IJ' nil ys nil).
+              assert(Forall2R
           (fun u v : option (sort * ltt) =>
            u = None \/
            (exists (s : sort) (t t' : ltt),
               u = Some (s, t) /\
-              v = Some (s, t') /\ (exists k : fin, merges_at_n k t t' /\ k < Nat.max n n'))) IJ'
-          IJ).
-            apply IHIJ'; try easy. constructor. constructor. constructor; try easy.
-            clear H0 H8 H5 H4 H IHIJ'.
-            destruct H6. left. easy. destruct H. destruct H. destruct H. destruct H. destruct H0. destruct H1. destruct H1. subst. right. exists x. exists x0. exists x1. split. easy. split. easy. exists x2. split; try easy.
-            specialize(Nat.le_max_l n n'); intros. apply Nat.le_trans with (m := n); try easy.
-          - inversion H. subst. clear H.
-            inversion H2. subst. clear H2 H4.
-            specialize(IHIJ' ys nil xs IJ' IJ n n').
-            assert(Forall2R
+              v = Some (s, t') /\ (exists k : fin, merges_at_n k t t' /\ k < Nat.max n n'))) IJ' ys).
+              apply IHIJ'; try easy. constructor. constructor. constructor. constructor; try easy.
+              clear H0 H5 H IHIJ'.
+              destruct H3. left. easy. destruct H. destruct H. destruct H. destruct H. destruct H0. destruct H1.
+              destruct H1. subst. right. exists x. exists x0. exists x1. 
+              split. easy. split. easy. exists x2. split. easy.
+              specialize(Nat.le_max_r n n'); intros. apply Nat.le_trans with (m := n'); try easy.
+            - subst. clear H.
+              specialize(IHIJ' n' n ys IJ' xa xc nil).
+              assert(Forall2R
           (fun u v : option (sort * ltt) =>
            u = None \/
            (exists (s : sort) (t t' : ltt),
               u = Some (s, t) /\
-              v = Some (s, t') /\ (exists k : fin, merges_at_n k t t' /\ k < Nat.max n n'))) IJ'
-          IJ).
-            apply IHIJ'; try easy. constructor. constructor. constructor; try easy.
-            destruct H3. left. easy. destruct H0. destruct H0. destruct H0. destruct H0. destruct H1. destruct H2. destruct H2. subst. right. 
-            exists x. exists x0.
-            destruct H7; try easy. destruct H0.
-            - destruct H0. destruct H0. easy.
-              destruct H0. destruct H0. destruct H0. destruct H1. inversion H0. subst. exists x1.
-              split. easy. split. easy. exists x2. split; try easy.
+              v = Some (s, t') /\ (exists k : fin, merges_at_n k t t' /\ k < Nat.max n n'))) IJ' xc).
+              apply IHIJ'; try easy. constructor. constructor. constructor; try easy.
+              destruct H3. left. easy.
+              destruct H0. destruct H0. destruct H0. destruct H0. destruct H1. destruct H2. destruct H2.
+              subst. destruct H6; try easy. destruct H0. destruct H0. destruct H0.
+              destruct H1. inversion H1. subst.
+              right. exists x. exists x0. exists x1. split. easy. split. easy.
+              exists x2. split; try easy.
+              specialize(Nat.le_max_r n n'); intros. apply Nat.le_trans with (m := n'); try easy.
+              right. destruct H0. destruct H0. destruct H0. destruct H1. easy.
+              destruct H0. destruct H0. destruct H1. inversion H1. subst.
+              exists x. exists x0. exists x1. split. easy. split. easy. exists x2. split. easy.
+              specialize(Nat.le_max_r n n'); intros. apply Nat.le_trans with (m := n'); try easy.
+            - subst. clear H11 H6.
+              destruct xs; try easy. inversion H5. subst. clear H5.
+              inversion H. subst. clear H.
+              specialize(IHIJ' n' n nil nil xs xs IJ').
+              assert(Forall2R
+          (fun u v : option (sort * ltt) =>
+           u = None \/
+           (exists (s : sort) (t t' : ltt),
+              u = Some (s, t) /\
+              v = Some (s, t') /\ (exists k : fin, merges_at_n k t t' /\ k < Nat.max n n'))) IJ' xs).
+              apply IHIJ'; try easy. constructor. constructor. constructor. constructor; try easy.
+              destruct H3. left. easy. destruct H0. destruct H0. destruct H0. destruct H0. 
+              destruct H1. destruct H2. destruct H2. subst.
+              right. exists x. exists x0. exists x1. split. easy. split. easy.
+              exists x2. split; try easy.
               specialize(Nat.le_max_l n n'); intros. apply Nat.le_trans with (m := n); try easy.
-            - destruct H0. destruct H0. destruct H1. inversion H0. subst.
-              exists x1. split. easy. split. easy. exists x2. split; try easy.
-              specialize(Nat.le_max_l n n'); intros. apply Nat.le_trans with (m := n); try easy.
-          - destruct ys; try easy. destruct IJ; try easy.
-            inversion H. inversion H2. inversion H4. inversion H5. subst. clear H H2 H4 H5.
-            specialize(IHIJ' ys ys' xs xs' IJ n n').
-            assert(Forall2R
+            - subst.
+              clear H.
+              specialize(IHIJ' n' n xb nil xs xc IJ').
+              assert(Forall2R
           (fun u v : option (sort * ltt) =>
            u = None \/
            (exists (s : sort) (t t' : ltt),
               u = Some (s, t) /\
-              v = Some (s, t') /\ (exists k : fin, merges_at_n k t t' /\ k < Nat.max n n'))) IJ'
-          IJ).
-            apply IHIJ'; try easy. constructor; try easy.
-            clear H H32 H23 H17 H11 IHIJ'.
-            destruct H28.
-            - destruct H. destruct H0. subst. left. easy.
-            destruct H.
-            - destruct H. destruct H. destruct H0. subst. right. 
-              destruct H21; try easy. destruct H. destruct H. destruct H. destruct H. destruct H0. destruct H1.
-              destruct H1. inversion H. subst. 
-              destruct H7; try easy. destruct H0.
-              - destruct H0. destruct H0. destruct H3. inversion H3. subst. exists x0. exists x1. exists x2.
-                split. easy. split. easy. exists x3. split; try easy.
-                specialize(Nat.le_max_r n n'); intros. apply Nat.le_trans with (m := n'); try easy.
-              - destruct H0. destruct H0. destruct H0. destruct H3. easy.
-                destruct H0. destruct H0. destruct H3. inversion H3. subst.
-                exists x0. exists x1. exists x2. split. easy. split. easy. exists x3. split; try easy.
-                specialize(Nat.le_max_r n n'); intros. apply Nat.le_trans with (m := n'); try easy.
-            - destruct H. destruct H. destruct H. destruct H0. subst.
-              right. destruct H15; try easy. destruct H. destruct H. destruct H. destruct H. destruct H0.
-              destruct H1. destruct H1. inversion H. subst.
-              destruct H7; try easy. destruct H0.
-              - destruct H0. destruct H0. easy.
-                destruct H0. destruct H0. destruct H0. destruct H3. inversion H0. subst.
-                exists x0. exists x1. exists x2. split. easy. split. easy.
-                exists x3. split; try easy. 
+              v = Some (s, t') /\ (exists k : fin, merges_at_n k t t' /\ k < Nat.max n n'))) IJ' xc).
+              apply IHIJ'; try easy. constructor. constructor. constructor; try easy.
+              destruct H3. left. easy.
+              destruct H0. destruct H0. destruct H0. destruct H0. destruct H1. destruct H2. destruct H2.
+              subst.
+              clear H6 H H8 IHIJ'.
+              destruct H4; try easy. right. exists x. exists x0.
+              destruct H. destruct H. destruct H. easy.
+              destruct H. destruct H. destruct H. destruct H0. inversion H. subst.
+              exists x1. split. easy. split. easy. exists x2. split. easy.
+              specialize(Nat.le_max_l n n'); intros. apply Nat.le_trans with (m := n); try easy.
+              destruct H. destruct H. destruct H0. inversion H. subst.
+              exists x1. split. easy. split. easy. exists x2. split. easy.
+              specialize(Nat.le_max_l n n'); intros. apply Nat.le_trans with (m := n); try easy.
+            - subst. clear H11. destruct xs; try easy. destruct ys; try easy. 
+              inversion H5. subst. clear H5. inversion H6. subst. clear H6.
+              inversion H. subst. clear H.
+              specialize(IHIJ' n' n ys xb xs xc xa).
+              assert(Forall2R
+          (fun u v : option (sort * ltt) =>
+           u = None \/
+           (exists (s : sort) (t t' : ltt),
+              u = Some (s, t) /\
+              v = Some (s, t') /\ (exists k : fin, merges_at_n k t t' /\ k < Nat.max n n'))) IJ' xc).
+              apply IHIJ'; try easy. constructor; try easy.
+              clear H H13 H10 H9 H8 IHIJ'.
+              destruct H7. destruct H. destruct H0. subst. left. easy.
+              right.
+              - destruct H. destruct H. destruct H. destruct H0. subst.
+                destruct H4; try easy. destruct H. destruct H. destruct H. destruct H. inversion H. subst.
+                destruct H0. destruct H1. destruct H1. subst.
+                destruct H12; try easy. destruct H0.
+                - destruct H0. destruct H0. destruct H4. inversion H4. subst.
+                  exists x0. exists x1. exists x2. split. easy. split. easy.
+                  exists x. split. easy.
+                  specialize(Nat.le_max_r n n'); intros. apply Nat.le_trans with (m := n'); try easy.
+                - destruct H0. destruct H0. destruct H0. destruct H4. easy.
+                  destruct H0. destruct H0. destruct H4. inversion H4. subst.
+                  exists x0. exists x1. exists x2. split. easy. split. easy.
+                  exists x. split. easy.
+                  specialize(Nat.le_max_r n n'); intros. apply Nat.le_trans with (m := n'); try easy.
+              - destruct H. destruct H. destruct H. destruct H0. subst.
+                destruct H3; try easy. destruct H. destruct H. destruct H. destruct H. destruct H0.
+                destruct H1. destruct H1. inversion H. subst.
+                exists x0. exists x1.
+                destruct H12; try easy. destruct H0.
+                destruct H0. destruct H0. easy.
+                - destruct H0. destruct H0. destruct H0. destruct H3. inversion H0.
+                  subst. exists x2. split. easy. split. easy.
+                  exists x3. split. easy.
+                  specialize(Nat.le_max_l n n'); intros. apply Nat.le_trans with (m := n); try easy.
+                - destruct H0. destruct H0. destruct H3. inversion H0. subst.
+                  exists x2. split. easy. split. easy. exists x3. split. easy.
+                  specialize(Nat.le_max_l n n'); intros. apply Nat.le_trans with (m := n); try easy.
+              - destruct H. destruct H. destruct H0. subst. 
+                destruct H3; try easy. destruct H. destruct H. destruct H. destruct H. destruct H0.
+                destruct H1. destruct H1. inversion H. subst.
+                destruct H4; try easy. destruct H0. destruct H0. destruct H0. destruct H0. destruct H3.
+                destruct H4. destruct H4. inversion H0. subst.
+                destruct H12; try easy. destruct H3. destruct H3. destruct H3. easy.
+                destruct H3. destruct H3. destruct H3. destruct H6. easy.
+                destruct H3. destruct H3. destruct H6. inversion H3. inversion H6. subst. inversion H10. subst.
+                exists x. exists x4. exists x2. split. easy. split. easy. exists x3. split. easy.
                 specialize(Nat.le_max_l n n'); intros. apply Nat.le_trans with (m := n); try easy.
-              - destruct H0. destruct H0. destruct H3. inversion H0. subst.
-                exists x0. exists x1. exists x2. split. easy. split. easy.
-                exists x3. split; try easy. 
-                specialize(Nat.le_max_l n n'); intros. apply Nat.le_trans with (m := n); try easy.
-            - destruct H. destruct H. destruct H0. subst. 
-              destruct H21; try easy. destruct H. destruct H. destruct H. destruct H. destruct H0. destruct H1. inversion H. subst.
-              destruct H15; try easy. destruct H0. destruct H0. destruct H0. destruct H0. destruct H2. destruct H3.
-              inversion H0. subst. 
-              destruct H7; try easy. destruct H2.
-              destruct H2. destruct H2. easy. destruct H2. destruct H2. destruct H2. destruct H2. easy.
-              destruct H2. destruct H2. destruct H4. inversion H2. inversion H4. subst.
-              right. exists x. exists x4. exists x5. split. easy. split. easy.
-              exists x6. split; try easy.
-              specialize(Nat.le_max_l n n'); intros. apply Nat.le_trans with (m := n); try easy.
 Qed.
 
 Lemma _3_19_3_helper : forall G G' p q s l L1 L2 LS LT LS' LT' T,

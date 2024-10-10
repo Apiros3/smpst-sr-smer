@@ -19,6 +19,7 @@ Inductive merge2 : ltt -> ltt -> ltt -> Prop :=
                   (exists t, u = None /\ v = Some t /\ w = Some t) \/
                   (exists t, u = Some t /\ v = None /\ w = Some t) \/
                   (exists t, u = Some t /\ v = Some t /\ w = Some t)) xs ys IJ -> 
+                  SList xs -> SList ys ->
               merge2 (ltt_recv p xs) (ltt_recv p ys) (ltt_recv p IJ).
 
 Inductive isMerge : ltt -> list (option ltt) -> Prop :=
@@ -28,11 +29,12 @@ Inductive isMerge : ltt -> list (option ltt) -> Prop :=
 
 Inductive isMergable : ltt -> ltt -> Prop :=
   | mrgba : forall x, isMergable x x
-  | mrgb_bra : forall r xs ys, Forall2R (fun u v => u = None \/ u = v) xs ys -> isMergable (ltt_recv r xs) (ltt_recv r ys).
+  | mrgb_bra : forall r xs ys, Forall2R (fun u v => u = None \/ u = v) xs ys -> (SList ys -> SList xs) ->
+               isMergable (ltt_recv r xs) (ltt_recv r ys).
   
 Inductive merges_at_n : fin -> ltt -> ltt -> Prop := 
   | merga0 : forall T T', isMergable T T' -> merges_at_n 0 T T'
-  | mergan_recv : forall n p xs ys, Forall2R (fun u v => u = None \/ (exists s t t', u = Some(s, t) /\ v = Some(s, t') /\ exists k, merges_at_n k t t' /\ k < n)) xs ys 
+  | mergan_recv : forall n p xs ys, Forall2R (fun u v => u = None \/ (exists s t t', u = Some(s, t) /\ v = Some(s, t') /\ exists k, merges_at_n k t t' /\ k < n)) xs ys -> (SList ys -> SList xs) 
                   -> merges_at_n n (ltt_recv p xs) (ltt_recv p ys)
   | mergan_send : forall n p xs ys, Forall2 (fun u v => (u = None /\ v = None) \/ (exists s t t', u = Some(s, t) /\ v = Some(s, t') /\ exists k, merges_at_n k t t' /\ k < n)) xs ys 
                   -> merges_at_n n (ltt_send p xs) (ltt_send p ys).
@@ -40,7 +42,7 @@ Inductive merges_at_n : fin -> ltt -> ltt -> Prop :=
 Section merges_at_n_ind_ref.
   Variable P : fin -> ltt -> ltt -> Prop.
   Hypothesis P_merga0 : forall T T', isMergable T T' -> P 0 T T'.
-  Hypothesis P_mergan_recv : forall n p xs ys, Forall2R (fun u v => u = None \/ (exists s t t', u = Some(s, t) /\ v = Some(s, t') /\ exists k, P k t t' /\ k < n)) xs ys 
+  Hypothesis P_mergan_recv : forall n p xs ys, Forall2R (fun u v => u = None \/ (exists s t t', u = Some(s, t) /\ v = Some(s, t') /\ exists k, P k t t' /\ k < n)) xs ys -> (SList ys -> SList xs) 
                   -> P n (ltt_recv p xs) (ltt_recv p ys).
   Hypothesis P_mergan_send : forall n p xs ys, Forall2 (fun u v => (u = None /\ v = None) \/ (exists s t t', u = Some(s, t) /\ v = Some(s, t') /\ exists k, P k t t' /\ k < n)) xs ys 
                   -> P n (ltt_send p xs) (ltt_send p ys).
@@ -49,7 +51,7 @@ Section merges_at_n_ind_ref.
   Proof. 
     refine (match a with 
       | merga0 t t' ha => P_merga0 t t' ha
-      | mergan_recv n p xs ys Ha => P_mergan_recv n p xs ys _
+      | mergan_recv n p xs ys Ha Hb => P_mergan_recv n p xs ys _ Hb
       | mergan_send n p xs ys Ha => P_mergan_send n p xs ys _
     end); try easy.
     - revert Ha. 
