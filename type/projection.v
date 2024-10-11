@@ -924,48 +924,36 @@ Proof.
     apply gttT_mon.
 Qed.
 
-(* Lemma part_break_helper : forall Gl G pt,
-  gttTC Gl G -> 
-  (forall n : fin, exists m : fin, guardG n m Gl) -> 
-  isgPartsC pt G -> 
-  isgParts pt Gl.
-Proof.
-  intros.
-  unfold isgPartsC in H1. destruct H1. destruct H1. rename x into Gl'.
-  specialize(isgParts_depth_exists pt Gl' H2); intros. destruct H3. rename x into n.
-  revert H3 H2 H1 H0 H. revert Gl G pt Gl'.
-  induction n; intros; try easy.
-  inversion H3; try easy.
-  - subst.
-    pinversion H1; try easy. subst. 
-    pinversion H; try easy. subst.
-    - constructor.
-    - subst. specialize(guard_breakG G H0); intros.
-      destruct H6. destruct H6. destruct H7.
-      (* 
-      multiS betaG (g_rec G) x -> isgParts pt 
-      
-       destruct H9.
-      - subst. clear H4 H5. *)
-Admitted. *)
-
 Lemma part_break : forall G pt,
     wfgC G -> 
     isgPartsC pt G -> 
     exists Gl, gttTC Gl G /\ isgParts pt Gl /\ (Gl = g_end \/ exists p q lis, Gl = g_send p q lis).
 Proof.
   intros. 
-  unfold wfgC in H. destruct H. destruct H. destruct H1. rename x into Gl. destruct H2.
- (*  pinversion H; intros. 
+  unfold isgPartsC in H0. destruct H0. destruct H0.
+  rename x into Gl.
+  specialize(isgParts_depth_exists pt Gl H1); intros. destruct H2. rename x into n.
   
-    
-    exists g_end. split. pfold. 
-    unfold isgPartsC in H0. destruct H0. destruct H0. 
-  specialize(guard_breakG Gl G H H2); intros. destruct H4. destruct H4. destruct H5.
-  rename x into G'.
-   *)
-  
-Admitted.
+  clear H.
+  clear H1.
+  revert H2 H0. revert G pt Gl.
+  induction n; intros; try easy.
+  - inversion H2. subst.
+    exists (g_send pt q lis). split. easy. split. constructor. right. exists pt. exists q. exists lis. easy.
+  - subst.
+    exists (g_send p pt lis). split. easy. split. constructor. right. exists p. exists pt. exists lis. easy.
+  - inversion H2. subst.
+    pinversion H0. subst.
+    specialize(subst_parts_depth 0 0 n pt g g Q H3 H1); intros.
+    apply IHn with (Gl := Q); try easy.
+    apply gttT_mon.
+  - subst. 
+    exists (g_send p q lis). split. easy.
+    split.
+    apply pa_sendr with (n := k) (s := s) (g := g); try easy.
+    apply isgParts_depth_back with (n := n); try easy.
+    right. exists p. exists q. exists lis. easy.
+Qed.
 
 Fixpoint overwrite_lis {A} (n : fin) (x : (option A)) (xs : list (option A)) : list (option A) := 
   match xs with 

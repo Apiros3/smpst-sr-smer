@@ -104,6 +104,16 @@ Lemma wfC_send : forall [l LP SL TL p],
 Admitted.
 
 Lemma wfC_merge : forall n Tl T', wfC T' -> merges_at_n n Tl T' -> wfC Tl.
+Proof.
+
+  induction n; intros; try easy.
+  - inversion H0.
+    - subst.
+      inversion H1. subst. easy. subst.
+      admit.
+    - subst.  
+  intros. revert H. re
+  
 Admitted.
 
 
@@ -114,13 +124,13 @@ Proof.
   - inversion H.
     - subst. apply stRefl; try easy.
     - subst. pfold. constructor.
-      clear H. clear r. revert H0. revert ys.
+      clear H H1. clear r. revert H0. revert ys.
       induction xs; intros; try easy. destruct ys; try easy.
       inversion H0. subst. clear H0. specialize(IHxs ys H5). 
       destruct H3. subst. simpl. destruct o; try easy. destruct p; try easy.
       subst. simpl. destruct o; try easy. destruct p. split. apply srefl. split. left. apply stRefl. easy.
     - subst. pfold. constructor.
-      clear p. revert H. revert n. revert ys.
+      clear p H0. revert H. revert n. revert ys.
       induction xs; intros; try easy. destruct ys; try easy.
       inversion H. subst. clear H. specialize(IHxs ys n H5). clear H5.
       destruct H3. subst. simpl. destruct o; try easy. destruct p; try easy.
