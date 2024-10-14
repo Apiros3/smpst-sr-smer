@@ -7,6 +7,7 @@ type/global.v
 type/isomorphism.v
 type/merge.v
 type/projection.v
+type/proj_part.v
 type/proj_sub.v
 process/processes.v
 process/typecheck.v

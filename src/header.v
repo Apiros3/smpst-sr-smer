@@ -4,6 +4,11 @@ Import ListNotations.
 
 Notation fin := nat.
 
+Inductive Forall3S {A} : (A -> A -> A -> Prop) -> list A -> list A -> list A -> Prop := 
+  | Forall3_nil0 : forall P xs, Forall3S P nil xs xs
+  | Forall3_nil1 : forall P xs, Forall3S P xs nil xs
+  | Forall3_cons : forall P a xa b xb c xc, P a b c -> Forall3S P xa xb xc -> Forall3S P (a :: xa) (b :: xb) (c :: xc).
+
 Fixpoint SList {A} (lis : list (option A)) : Prop := 
   match lis with 
     | Datatypes.Some x :: [] => True 
@@ -96,6 +101,22 @@ Proof.
   specialize(IHxs x H). destruct IHxs. exists (Nat.succ x0). easy.
 Qed.
 
+Lemma SList_to_In {A} : forall (xs : list (option A)),
+    SList xs ->
+    exists t, In (Some t) xs.
+Proof.
+  induction xs; intros; try easy.
+  specialize(SList_f a xs H); intros.
+  destruct H0.
+  specialize(IHxs H0). destruct IHxs. exists x. right. easy.
+  destruct H0. destruct H1. subst. exists x. left. easy.
+Qed.
+
+Lemma extendExtract {A} : forall n (ST : option A), onth n (extendLis n ST) = ST.
+Proof.
+  induction n; intros; try easy.
+  apply IHn; try easy.
+Qed.
 
 Lemma triad_le :  forall m t',
                   is_true (ssrnat.leq m t') ->
@@ -106,4 +127,27 @@ Proof.
   clear H H0. clear m.
   induction t'; intros; try easy.
 Qed.
+
+
+Fixpoint overwrite_lis {A} (n : fin) (x : (option A)) (xs : list (option A)) : list (option A) := 
+  match xs with 
+    | y::xs => match n with 
+        | 0 => x :: xs
+        | S k => y :: overwrite_lis k x xs
+      end
+    | nil   => match n with 
+        | 0 => [x]
+        | S k => None :: overwrite_lis k x nil 
+      end
+  end.
+
+Lemma overwriteExtract {A} : forall n (ST : option A) lis, onth n (overwrite_lis n ST lis) = ST.
+Proof.
+  induction n; intros.
+  destruct lis; try easy.
+  destruct lis; try easy.
+  specialize(IHn ST nil). easy.
+  specialize(IHn ST lis). easy.
+Qed. 
+ 
   

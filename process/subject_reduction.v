@@ -112,7 +112,7 @@ Proof.
       inversion H1. subst. easy. subst.
       admit.
     - subst.  
-  intros. revert H. re
+  intros. revert H. 
   
 Admitted.
 

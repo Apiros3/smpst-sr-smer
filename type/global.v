@@ -120,7 +120,7 @@ Proof.
     apply LE; try easy.
 Qed.
 
-Lemma guardL_more : forall n m k G, guardG n m G -> m <= k -> guardG n k G.
+Lemma guardG_more : forall n m k G, guardG n m G -> m <= k -> guardG n k G.
 Proof.
   induction n; intros; try easy.
   - apply gg_nil.

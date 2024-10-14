@@ -95,7 +95,38 @@ Section typ_gtth_ind_ref.
 
 End typ_gtth_ind_ref.
 
-Definition balancedG (G : gtt) := forall G w w' p q gn,
+Fixpoint isoList (R: ltt -> ltt -> Prop) (l1 l2: list (option(sort*ltt))): Prop :=
+  match (l1,l2) with
+    | (Datatypes.None::xs, Datatypes.None::ys)               => isoList R xs ys
+    | (Datatypes.Some (s,t)::xs, Datatypes.Some (s',t')::ys) => s = s' /\ R t t' /\ isoList R xs ys
+    | _                                                      => True
+  end.
+
+Inductive lttIso (R: ltt -> ltt -> Prop): ltt -> ltt -> Prop :=
+  | i_end : lttIso R ltt_end ltt_end
+  | i_recv: forall p xs ys, isoList R xs ys -> lttIso R (ltt_recv p xs) (ltt_recv p ys)
+  | i_send: forall p xs ys, isoList R xs ys -> lttIso R (ltt_send p xs) (ltt_send p ys).
+
+Definition lttIsoC L L' := paco2 lttIso bot2 L L'.
+
+(* equivalent to functional extensionality *)
+Axiom lltExt: forall L L', lttIsoC L L' -> L = L'.
+
+Lemma lltExt_b : forall r L L', L = L' -> paco2 lttIso r L L'.
+Proof.
+  pcofix CIH; intros.
+  subst.
+  pfold. 
+  destruct L'. constructor.
+  constructor. induction l; intros; try easy.
+  destruct a; try easy. destruct p; try easy. constructor; try easy. 
+  split; try easy. right. apply CIH; try easy.
+  constructor. induction l; intros; try easy.
+  destruct a; try easy. destruct p; try easy. constructor; try easy. 
+  split; try easy. right. apply CIH; try easy.
+Qed.
+
+Definition balancedG (G : gtt) := forall w w' p q gn,
   gttmap G w None gn -> gttmap G (w ++ w') None (gnode_pq p q) -> 
   (exists k, forall w', gttmap G (w ++ w') None (gnode_end) \/ 
                         (List.length w' = k /\ exists w2 w0, w' = w2 ++ w0 /\ exists r, 
@@ -104,8 +135,6 @@ Definition balancedG (G : gtt) := forall G w w' p q gn,
                         (List.length w' = k /\ exists w2 w0, w' = w2 ++ w0 /\ exists r,
                         gttmap G (w ++ w2) None (gnode_pq q r) \/ gttmap G (w ++ w2) None (gnode_pq r q))).
 
-(* Definition wfgT G := wfG G /\ (forall n, exists m, guardG n m G) /\ balancedG G.
- *)
 Definition wfgC G := exists G', gttTC G' G /\ wfG G' /\ (forall n, exists m, guardG n m G') /\ balancedG G. 
 
 Definition wfC T := exists T', lttTC T' T /\ wfL T' /\ (forall n, exists m, guardL n m T').

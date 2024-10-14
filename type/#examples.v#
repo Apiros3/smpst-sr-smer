@@ -60,38 +60,14 @@ Some (ltt_send "s" [Some (snat, ltt_recv "q" [Some (sbool, ltt_end); Some (sbool
     admit.
 Admitted.
 
-Example Gex2 : gttstepC G (gtt_send "s" "s'" [Some(snat, gtt_send "r" "s" [Some(snat, gtt_send "s" "r" [Some(sbool, gtt_end)])]); Some(snat, G3)]) "p" "q" 0.
+Example Gex2 : gttstepC G (gtt_send "s" "s'" [Some(snat, gtt_send "r" "s" [Some(snat, gtt_send "q" "r" [Some(sbool, gtt_end)])]); Some(snat, G3)]) "p" "q" 0.
 Proof.
   pfold. constructor; try easy.
   - constructor; try easy. right. exists snat. exists G1. split. easy. 
     split. 
-    - unfold isgPartsC. unfold G1. 
-      exists (g_send "r" "s"
-       [Some
-          (snat,
-           g_send "p" "q"
-             [Some (snat, g_send "s" "r" [Some (sbool, g_end)]);
-              Some (snat, g_send "s" "r" [None; Some (sbool, g_end)])])]).
-      split. pfold. constructor. constructor; try easy.
-      right. exists snat. exists (g_send "p" "q"
-       [Some (snat, g_send "s" "r" [Some (sbool, g_end)]);
-        Some (snat, g_send "s" "r" [None; Some (sbool, g_end)])]). exists (gtt_send "p" "q"
-       [Some (snat, gtt_send "s" "r" [Some (sbool, gtt_end)]);
-        Some (snat, gtt_send "s" "r" [None; Some (sbool, gtt_end)])]).
-       split. easy. split. easy. left.
-       pfold. constructor. constructor; try easy. 
-       right. exists snat. exists (g_send "s" "r" [Some (sbool, g_end)]). exists (gtt_send "s" "r" [Some (sbool, gtt_end)]).
-       split. easy. split. easy. left. pfold. constructor. constructor; try easy.
-       right. exists sbool. exists g_end. exists gtt_end. split. easy. split. easy.
-       left. pfold. constructor. constructor.
-       right. exists snat. exists (g_send "s" "r" [None; Some (sbool, g_end)]). exists (gtt_send "s" "r" [None; Some (sbool, gtt_end)]).
-       split. easy. split. easy. left. pfold. constructor. constructor; try easy. left. easy. constructor; try easy.
-       right. exists sbool. exists g_end. exists gtt_end. split. easy. split. easy.
-       left. pfold. constructor. constructor.
-       apply pa_sendr with (n := 0) (s := snat) (g := g_send "p" "q"
-           [Some (snat, g_send "s" "r" [Some (sbool, g_end)]);
-            Some (snat, g_send "s" "r" [None; Some (sbool, g_end)])]); try easy.
-       constructor.
+    - unfold isgPartsC. unfold G1. admit. admit.
+    - constructor
+      
     - unfold isgPartsC. unfold G1. 
       exists (g_send "r" "s"
        [Some
