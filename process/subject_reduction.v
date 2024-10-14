@@ -1,4 +1,4 @@
-From SST Require Export src.expressions process.processes process.typecheck type.global type.local process.beta process.sessions process.inversion  type.isomorphism type.projection type.proj_sub.
+From SST Require Export src.expressions process.processes process.typecheck type.global type.local process.beta process.sessions process.inversion  type.isomorphism type.projection type.proj_part.
 Require Import List String Datatypes ZArith Relations PeanoNat.
 Open Scope list_scope.
 From Paco Require Import paco pacotac.
@@ -103,49 +103,6 @@ Lemma wfC_send : forall [l LP SL TL p],
         wfC TL.
 Admitted.
 
-Lemma wfC_merge : forall n Tl T', wfC T' -> merges_at_n n Tl T' -> wfC Tl.
-Proof.
-
-  induction n; intros; try easy.
-  - inversion H0.
-    - subst.
-      inversion H1. subst. easy. subst.
-      admit.
-    - subst.  
-  intros. revert H. 
-  
-Admitted.
-
-
-Lemma merges_at_to_subtype : forall n Tl T', merges_at_n n Tl T' -> subtypeC T' Tl.
-Proof.
-  intros. 
-  induction H using merges_at_n_ind_ref; intros.
-  - inversion H.
-    - subst. apply stRefl; try easy.
-    - subst. pfold. constructor.
-      clear H H1. clear r. revert H0. revert ys.
-      induction xs; intros; try easy. destruct ys; try easy.
-      inversion H0. subst. clear H0. specialize(IHxs ys H5). 
-      destruct H3. subst. simpl. destruct o; try easy. destruct p; try easy.
-      subst. simpl. destruct o; try easy. destruct p. split. apply srefl. split. left. apply stRefl. easy.
-    - subst. pfold. constructor.
-      clear p H0. revert H. revert n. revert ys.
-      induction xs; intros; try easy. destruct ys; try easy.
-      inversion H. subst. clear H. specialize(IHxs ys n H5). clear H5.
-      destruct H3. subst. simpl. destruct o; try easy. destruct p; try easy.
-      destruct H. destruct H. destruct H. destruct H. destruct H0. destruct H1. destruct H1. subst.
-      simpl. split. apply srefl. split. left. easy. easy.
-    - pfold. constructor.
-      clear p. revert H. revert n. revert ys.
-      induction xs; intros; try easy. destruct ys; try easy.
-      inversion H. subst. clear H. specialize(IHxs l' n H4). clear H4.
-      destruct H2. destruct H. subst. easy.
-      destruct H. destruct H. destruct H. destruct H. destruct H0. destruct H1. destruct H1.
-      subst. simpl. split. apply srefl. split; try easy. left. easy.
-Qed.
-
-
 
 Lemma _3_19_3_helper : forall M p q G G' l L1 L2 S T xs y,
     wfgC G ->
@@ -174,18 +131,9 @@ Proof.
     specialize(projection_step_label G G' p0 q l L1 L2 H H0 H2 H6); intros.
     destruct H10. destruct H10. destruct H10. destruct H10. destruct H10.
     specialize(_3_19_3_helper G G' p0 q s l L1 L2 x x1 x0 x2 T'); intros.
-    assert(exists T'0 : ltt, projectionC G' s T'0 /\ (exists n : fin, merges_at_n n T'0 T')).
+    assert(exists T'0 : ltt, projectionC G' s T'0 /\ T'0 = T').
     apply H13; try easy.
-    clear H13.
-    destruct H14. exists x3. split; try easy. destruct H13. rename x3 into Tl. 
-    
-    clear H13 H12 H10. clear x x0 x1 x2.
-    destruct H14. rename x into n.
-    clear H0 H1 H2 H3 H4 H5 H6 H9 H11 H7 H. clear s p0 q G G' l L1 L2 S T. clear xs y.
-    apply tc_sub with (t := T'); try easy.
-    apply merges_at_to_subtype with (n := n); try easy.
-    apply wfC_merge with (n := n) (T' := T'); try easy.
-    specialize(typable_implies_wfC H8); try easy.
+    clear H13. destruct H14. exists x3. split; try easy. destruct H13. rename x3 into Tl. subst. easy. 
   - inversion H4. subst.
     specialize(noin_cat_and q (flattenT M1) (flattenT M2) H7); intros.
     specialize(noin_cat_and p (flattenT M1) (flattenT M2) H8); intros.
@@ -197,8 +145,6 @@ Proof.
     specialize(IHM2 p q G G' l L1 L2 S T xs y H H0 H1 H2 H3 H12 H5 H6 H15 H16).
     constructor; try easy.
 Qed.
-
-
 
 Lemma _3_21_helper : forall l xs x1 y,
     onth l xs = Some y ->
