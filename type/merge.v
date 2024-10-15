@@ -17,7 +17,61 @@ Lemma merge_end_back : forall ys0 t,
     t = ltt_end.
 Admitted.
 
-(* dependent on plain *)
+Lemma Iso_mon : monotone2 lttIso.
+Proof.
+  unfold monotone2; intros.
+  induction IN; intros; try easy.
+  - constructor.
+  - constructor. revert H. revert xs ys.
+    induction xs; intros; try easy. destruct ys; try easy.
+    destruct a. destruct p0. destruct o; try easy. destruct p0.
+    simpl in *. split. easy. split. apply LE; try easy.
+    apply IHxs; try easy.
+  - destruct o; try easy.
+    apply IHxs; try easy.
+  - constructor. revert H. revert xs ys.
+    induction xs; intros; try easy. destruct ys; try easy.
+    destruct a. destruct p0. destruct o; try easy. destruct p0.
+    simpl in *. split. easy. split. apply LE; try easy.
+    apply IHxs; try easy.
+  - destruct o; try easy.
+    apply IHxs; try easy.
+Qed.
+
+Lemma lttIso_inv : forall r p xs q ys,
+  (paco2 lttIso r (ltt_recv p xs) (ltt_recv q ys)) -> 
+  p = q /\ List.Forall2 (fun u v => (u = None /\ v = None) \/ (exists s t t', u = Some(s, t) /\ v = Some(s, t') /\ upaco2 lttIso r t t')) xs ys.
+  intros.
+  pinversion H; intros; try easy.
+  subst. split. easy.
+  clear H. revert H1. clear q.
+  revert xs ys.
+  induction xs; intros; try easy.
+  - destruct ys; try easy. 
+  - destruct ys; try easy. destruct a; try easy. destruct p; try easy.
+    specialize(IHxs ys).
+    - destruct a. destruct p. destruct o; try easy. destruct p; try easy.
+      simpl in H1. destruct H1 as (Ha,(Hb,Hc)). specialize(IHxs Hc).
+      constructor; try easy. right. subst. exists s0. exists l. exists l0.
+      easy.
+    - destruct o; try easy.
+      specialize(IHxs H1). constructor; try easy. left. easy.
+  apply Iso_mon.
+Qed.
+
+Lemma lttIso_inv_b : forall xs ys p r,
+    List.Forall2 (fun u v => (u = None /\ v = None) \/ (exists s t t', u = Some(s, t) /\ v = Some(s, t') /\ upaco2 lttIso r t t')) xs ys -> 
+    paco2 lttIso r (ltt_recv p xs) (ltt_recv p ys).
+Proof.
+  intros. pfold. constructor. revert H. revert r ys. clear p.
+  induction xs; intros. destruct ys; try easy.
+  destruct ys; try easy. inversion H. subst. clear H.
+  specialize(IHxs r ys H5). clear H5.
+  destruct H3. destruct H. subst. easy.
+  destruct H as (s,(t1,(t2,(Ha,(Hb,Hc))))). subst.
+  simpl. easy.
+Qed.
+
 Lemma isMerge_injw : forall t t' r ys0 ys1,
     Forall2
        (fun u v : option ltt =>

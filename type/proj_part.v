@@ -1691,15 +1691,14 @@ Lemma _3_19_3_helper : forall G G' p q s l L1 L2 LS LT LS' LT' T,
       projectionC G s T -> 
       exists T', projectionC G' s T' /\ T' = T. 
 Proof.
-  (* intros.
-  specialize(_a_29_s G p q L1 L2 LS LT LS' LT' l H H0 H1 H2 H3); intros. rename H8 into Hs.
-  rename H9 into H8.
+  intros.
+  specialize(_a_29_s G p q L1 L2 LS LT LS' LT' l H H0 H1 H2 H3); intros. 
   destruct H8. rename x into Gl. rename H into Ht.
   destruct H8 as (ctxG,(SI,(Sn,(Ha,(Hb,(Hc,(Hd,He))))))).
   clear He.
   specialize(_3_19_ctx_loose Hd); intros. clear Hd.
   clear SI Sn.
-  revert H0 H1 H2 H3 H4 H5 H6 H7 Ha Hb Hc H Ht Hs. revert p q l G G' L1 L2 LS LS' LT LT' s T ctxG.
+  revert H0 H1 H2 H3 H4 H5 H6 H7 Ha Hb Hc H Ht. revert p q l G G' L1 L2 LS LS' LT LT' s T ctxG.
   induction Gl using gtth_ind_ref; intros.
   - inversion Ha. subst.
     specialize(Forall_forall (fun u : option gtt =>
@@ -1726,10 +1725,8 @@ Proof.
     - subst. easy.
     - subst. easy.
     - subst.
-      specialize(_3_19_3_helper_h1 l lsg ys s' Gjk s Hsa H18); intros.
-      destruct H8 as (t,(Hta,Htb)). 
-      exists t. split. easy.
-      admit. (* easy *)
+      exists T. split; try easy.
+      admit.
     apply proj_mon.
     apply step_mon.
   - inversion Ha. subst.
@@ -1756,7 +1753,7 @@ Proof.
     destruct H10 as (H10,(Hsa,Hsb)). clear H10 Hsa H9.
     pinversion H4; try easy. subst. clear H12 H13 H16 H17 H18 H21.
     assert(forall t, t <> p -> t <> q -> List.Forall (fun u => u = None \/ (exists s' g, u = Some (s', g) /\ forall G' T, 
-        gttstepC g G' p q l -> projectionC g t T -> exists T', projectionC G' t T' /\ isMergable T' T)) ys).
+        gttstepC g G' p q l -> projectionC g t T -> exists T', projectionC G' t T' /\ T' = T)) ys).
     {
       intros. apply Forall_forall; intros. rename H9 into Hka. rename H10 into Hkb. rename H11 into H9. destruct x.
       - right. specialize(in_some_implies_onth p0 ys H9); intros. destruct H10 as (n, H10).

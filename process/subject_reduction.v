@@ -44,32 +44,25 @@ Proof.
   split; try easy. apply Classical_Prop.and_not_or. split; try easy.
 Qed.
 
-(*
-Lemma wfL_after_betaL : forall G G',
-  wfL G -> multiS betaL G G' -> wfL G'.
-Admitted.
-
-Lemma wfC_implies_SList_recv : forall LQ q,
-  wfC (ltt_recv q LQ) -> SList LQ.
+Lemma wfC_helper : forall l LQ SL' TL' lis,
+    onth l LQ = Some (SL', TL') -> 
+    Forall2
+       (fun (u : option (sort * local)) (v : option (sort * ltt)) =>
+        u = None /\ v = None \/
+        (exists (s : sort) (g : local) (g' : ltt),
+           u = Some (s, g) /\ v = Some (s, g') /\ upaco2 lttT bot2 g g')) lis LQ -> 
+    exists T, onth l lis = Some(SL', T) /\ lttTC T TL'.
 Proof.
-  intro LQ. 
-  induction LQ; intros; try easy.
-  - unfold wfC in H. destruct H. destruct H. destruct H0.
-    pinversion H; try easy. subst. destruct xs; try easy.
-    inversion H0. subst. easy.
-    subst.
-    specialize(guard_break G H1); intros. destruct H4.
-    destruct H4. destruct H5.
-    specialize(ltt_after_betaL (l_rec G) x (ltt_recv q [])); intros.
-    assert (lttTC x (ltt_recv q [])). apply H7; try easy. pfold. easy.
-    destruct H6.
-    - subst. pinversion H8. apply lttT_mon.
-    - destruct H6. destruct H6. destruct H6. 
-      pinversion H8. subst. inversion H10. subst. inversion H11.
-      apply lttT_mon.
-    - subst. pinversion H8; try easy. subst.
-    
-Admitted. *)
+  induction l; intros.
+  - destruct LQ; try easy.
+    inversion H0. subst. clear H0 H5. simpl in H.
+    subst. destruct H4; try easy.
+    destruct H as (s,(g,(g',(Ha,(Hb,Hc))))). subst. inversion Hb. subst.
+    exists g. destruct Hc; try easy.
+  - destruct LQ ;try easy.
+    inversion H0. subst. clear H0. 
+    specialize(IHl LQ SL' TL' l0). apply IHl; try easy.
+Qed.
 
 Lemma wfC_recv :  forall [l LQ SL' TL' q],
         wfC (ltt_recv q LQ) -> 
@@ -78,30 +71,82 @@ Lemma wfC_recv :  forall [l LQ SL' TL' q],
 Proof.  
   intros.
   unfold wfC in *.
-  destruct H. rename x into T. destruct H. destruct H1.
-  pinversion H; try easy. subst.
-  assert(exists T, onth l xs = Some(SL', T) /\ lttTC T TL').
-  {
-    revert H5 H0. clear H2 H1 H. clear q. revert xs TL' SL' LQ.
-    induction l; intros.
-    - destruct LQ; try easy. destruct xs; try easy.
-      inversion H5. subst. clear H5. simpl in H0. subst.
-      destruct H3; try easy. destruct H. destruct H. destruct H. destruct H. destruct H0.
-      inversion H0. subst.
-      simpl in *. exists x0. pclearbot. easy.
-    - destruct LQ; try easy. destruct xs; try easy.
-      inversion H5. subst. specialize(IHl xs TL' SL' LQ H6). apply IHl; try easy.
-  }
-  destruct H3. destruct H3. rename x into T. exists T. split; try easy.
-  inversion H1. subst.
-  
-Admitted.
+  destruct H as (T,(Ha,(Hb,Hc))).
+  specialize(guard_breakL_s2 (ltt_recv q LQ) T Hc Hb Ha); intros.
+  clear Ha Hb Hc. clear T.
+  destruct H as (T,(Hb,(Hc,(Hd,He)))).
+  destruct Hb.
+  - subst. pinversion He; try easy. apply lttT_mon.
+  - destruct H as (p0,(lis,Hf)).
+    destruct Hf. subst. pinversion He. apply lttT_mon.
+  - subst. pinversion He; try easy. subst.
+    specialize(wfC_helper l LQ SL' TL' lis H0 H1); intros.
+    destruct H as (T,(Hf,Hg)).
+    exists T. split. easy. clear Hg H1 H0 He.
+    clear TL' LQ.
+    split.
+    - inversion Hd. subst.
+      clear H1 Hd Hc. revert Hf H2. revert lis. induction l; intros; try easy.
+      - destruct lis; try easy. inversion H2. subst. clear H2 H3.
+        simpl in *. subst. destruct H1; try easy.
+        destruct H as (s,(g,(Ha,Hb))). inversion Ha. subst. easy.
+      - destruct lis; try easy. inversion H2. subst. clear H2.
+        specialize(IHl lis). apply IHl; try easy.
+    - intros. specialize(Hc (S n)).
+      destruct Hc. inversion H. subst. 
+      clear Hd H. revert Hf H3. revert lis.
+      induction l; intros; try easy.
+      - destruct lis; try easy.
+        inversion H3. subst. clear H3 H2. simpl in *. subst.
+        destruct H1; try easy. destruct H as (s,(g,(Ha,Hb))). inversion Ha. subst.
+        exists x. easy.
+      - destruct lis; try easy.
+        inversion H3. subst. clear H3.
+        specialize(IHl lis). apply IHl; try easy.
+    apply lttT_mon.
+Qed.
 
 Lemma wfC_send : forall [l LP SL TL p],
         wfC (ltt_send p LP) -> 
         onth l LP = Some (SL, TL) -> 
         wfC TL.
-Admitted.
+Proof.
+  intros.
+  unfold wfC in *.
+  destruct H as (T,(Ha,(Hb,Hc))).
+  specialize(guard_breakL_s2 (ltt_send p LP) T Hc Hb Ha); intros.
+  clear Ha Hb Hc. clear T.
+  destruct H as (T,(Hb,(Hc,(Hd,He)))).
+  destruct Hb.
+  - subst. pinversion He; try easy. apply lttT_mon.
+  - destruct H as (p0,(lis,Hf)).
+    destruct Hf. subst. pinversion He; try easy. subst.
+    specialize(wfC_helper l LP SL TL lis H0 H1); intros.
+    destruct H as (T,(Hf,Hg)).
+    exists T. split. easy. clear Hg H1 H0 He.
+    clear TL LP.
+    split.
+    - inversion Hd. subst.
+      clear H1 Hd Hc. revert Hf H2. revert lis. induction l; intros; try easy.
+      - destruct lis; try easy. inversion H2. subst. clear H2 H3.
+        simpl in *. subst. destruct H1; try easy.
+        destruct H as (s,(g,(Ha,Hb))). inversion Ha. subst. easy.
+      - destruct lis; try easy. inversion H2. subst. clear H2.
+        specialize(IHl lis). apply IHl; try easy.
+    - intros. specialize(Hc (S n)).
+      destruct Hc. inversion H. subst. 
+      clear Hd H. revert Hf H3. revert lis.
+      induction l; intros; try easy.
+      - destruct lis; try easy.
+        inversion H3. subst. clear H3 H2. simpl in *. subst.
+        destruct H1; try easy. destruct H as (s,(g,(Ha,Hb))). inversion Ha. subst.
+        exists x. easy.
+      - destruct lis; try easy.
+        inversion H3. subst. clear H3.
+        specialize(IHl lis). apply IHl; try easy.
+    apply lttT_mon.
+  - subst. pinversion He; try easy. apply lttT_mon.
+Qed.
 
 
 Lemma _3_19_3_helper : forall M p q G G' l L1 L2 S T xs y,

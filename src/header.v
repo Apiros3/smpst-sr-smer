@@ -150,4 +150,17 @@ Proof.
   specialize(IHn ST lis). easy.
 Qed. 
  
-  
+Lemma max_l : forall m m1, m <= Nat.max m m1.
+Proof.
+  induction m; intros; try easy.
+  revert IHm. revert m. induction m1; intros; try easy.
+  apply IHm; try easy.
+Qed.
+
+Lemma max_r : forall m m1, m1 <= Nat.max m m1.
+Proof.
+  induction m; intros; try easy.
+  revert IHm. revert m. induction m1; intros; try easy.
+  apply IHm; try easy.
+Qed.
+
