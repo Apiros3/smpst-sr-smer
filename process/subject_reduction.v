@@ -176,7 +176,7 @@ Proof.
     specialize(projection_step_label G G' p0 q l L1 L2 H H0 H2 H6); intros.
     destruct H10. destruct H10. destruct H10. destruct H10. destruct H10.
     specialize(_3_19_3_helper G G' p0 q s l L1 L2 x x1 x0 x2 T'); intros.
-    assert(exists T'0 : ltt, projectionC G' s T'0 /\ T'0 = T').
+    assert(exists T'0 : ltt, projectionC G' s T'0 /\ T' = T'0).
     apply H13; try easy.
     clear H13. destruct H14. exists x3. split; try easy. destruct H13. rename x3 into Tl. subst. easy. 
   - inversion H4. subst.

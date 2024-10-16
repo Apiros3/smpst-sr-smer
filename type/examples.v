@@ -6,6 +6,28 @@ Require Import Coq.Init.Datatypes.
 Open Scope list_scope.
 Import ListNotations.
 
+CoFixpoint Ga : gtt := gtt_send "Alice" "Bob" [Some (snat, Ga); Some(snat, gtt_send "p" "q" [Some (sbool, gtt_end)])].
+
+Example Gaexp : projectionC Ga "p" (ltt_send "q" [Some(sbool, ltt_end)]).
+Proof.
+  pcofix CIH.
+  specialize(gtt_eq Ga); intros. 
+  replace Ga with (gtt_id Ga). unfold gtt_id. simpl.
+  pfold. apply proj_cont with (ys := [Some (ltt_send "q" [Some(sbool, ltt_end)]); Some (ltt_send "q" [Some(sbool, ltt_end)])]); try easy.
+  constructor.
+  - right. exists snat. exists Ga. exists (ltt_send "q" [Some (sbool, ltt_end)]). split. easy. split. easy.
+    right. easy.
+  constructor; try easy.
+  - right. exists snat. exists (gtt_send "p" "q" [Some (sbool, gtt_end)]). exists (ltt_send "q" [Some (sbool, ltt_end)]).
+    split. easy. split. easy. left.
+    pfold. constructor; try easy. constructor; try easy.
+    right. exists sbool. exists gtt_end. exists ltt_end. split. easy. split. easy. left. pfold. constructor.
+    intros. unfold isgPartsC in H0. destruct H0 as (Gl,(Ha,(Hb,Hc))). 
+    admit.
+  admit.
+Admitted.
+
+
 Definition G1 : gtt := gtt_send "r" "s" [Some(snat, gtt_send "p" "q" [Some(snat, gtt_send "q" "r" [Some(sbool, gtt_end)]); Some(snat, gtt_send "q" "r" [None; Some(sbool, gtt_end)])])].
 
 Definition G3 : gtt := gtt_send "r" "s" [Some(snat, gtt_send "q" "r" [Some(sbool, gtt_end); Some(sbool, gtt_end)])].

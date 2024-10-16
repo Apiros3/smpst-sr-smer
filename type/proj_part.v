@@ -1653,9 +1653,9 @@ Lemma _3_19_3_helper_h3 : forall ys ys2 p q l,
             u = Some (s', g) /\
             (forall (G' : gtt) (T : ltt),
              gttstepC g G' p q l ->
-             projectionC g t T -> exists T' : ltt, projectionC G' t T' /\ T' = T))) ys) ->
+             projectionC g t T -> exists T' : ltt, projectionC G' t T' /\ T = T'))) ys) ->
     forall t, t <> p -> t <> q -> Forall2 (fun u v => (u = None /\ v = None) \/ (exists s' g g', u = Some(s', g) /\ v = Some(s', g') /\
-      gttstepC g g' p q l /\ (forall T, projectionC g t T -> exists T', projectionC g' t T' /\ T' = T
+      gttstepC g g' p q l /\ (forall T, projectionC g t T -> exists T', projectionC g' t T' /\ T = T'
     ))) ys ys2.
 Proof.
   induction ys; intros; try easy.
@@ -1672,7 +1672,7 @@ Proof.
            u = Some (s', g) /\
            (forall (G' : gtt) (T : ltt),
             gttstepC g G' p q l ->
-            projectionC g t T -> exists T' : ltt, projectionC G' t T' /\ T' = T)))
+            projectionC g t T -> exists T' : ltt, projectionC G' t T' /\ T = T')))
        ys).
     {
       intros. specialize(H0 t0 H H3). inversion H0; try easy.
@@ -1698,7 +1698,7 @@ Lemma _3_19_3_helper : forall G G' p q s l L1 L2 LS LT LS' LT' T,
       s <> q ->
       s <> p ->
       projectionC G s T -> 
-      exists T', projectionC G' s T' /\ subtypeC T T' /\ (wfC T -> wfC T'). 
+      exists T', projectionC G' s T' /\ T = T'. 
 Proof.
   intros.
   specialize(_a_29_s G p q L1 L2 LS LT LS' LT' l H H0 H1 H2 H3); intros. 
@@ -1730,11 +1730,12 @@ Proof.
       pfold. apply proj_end; try easy.
       specialize(part_after_step (gtt_send p q lsg) Gjk p q s l L1 L2); intros.
       apply H8. apply H9; try easy. pfold. easy.
-      constructor. apply stRefl. easy.
+      constructor. 
     - subst. easy.
     - subst. easy.
-    - subst.
+    - subst. exists T. split. pfold. 
       admit.
+      easy.
     apply proj_mon.
     apply step_mon.
   - inversion Ha. subst.
@@ -1761,7 +1762,7 @@ Proof.
     destruct H10 as (H10,(Hsa,Hsb)). clear H10 Hsa H9.
     pinversion H4; try easy. subst. clear H12 H13 H16 H17 H18 H21.
     assert(forall t, t <> p -> t <> q -> List.Forall (fun u => u = None \/ (exists s' g, u = Some (s', g) /\ forall G' T, 
-        gttstepC g G' p q l -> projectionC g t T -> exists T', projectionC G' t T' /\ T' = T)) ys).
+        gttstepC g G' p q l -> projectionC g t T -> exists T', projectionC G' t T' /\ T = T')) ys).
     {
       intros. apply Forall_forall; intros. rename H9 into Hka. rename H10 into Hkb. rename H11 into H9. destruct x.
       - right. specialize(in_some_implies_onth p0 ys H9); intros. destruct H10 as (n, H10).
@@ -1794,7 +1795,7 @@ Proof.
                  g0 = gtt_send p q lsg /\
                  (exists (s'0 : sort) (Gjk : gtt) (Tp Tq : ltt),
                     onth l lsg = Some (s'0, Gjk) /\ projectionC Gjk p Tp /\ projectionC Gjk q Tq))) ctxG ->
-           wfgC G -> exists T' : ltt, projectionC G' s0 T' /\ T' = T))) xs); intros.
+           wfgC G -> exists T' : ltt, projectionC G' s0 T' /\ T = T'))) xs); intros.
         destruct H17. specialize(H17 H). clear H18 H.
         specialize(H17 (Some (s0, g')) H16). destruct H17; try easy. 
         specialize(Forall_forall (fun u : option (sort * gtt) =>
@@ -1831,6 +1832,10 @@ Proof.
       specialize(wfgC_after_step_all H23 Ht); intros.
       exists (ltt_recv s ys3). split; try easy.
       pfold. constructor; try easy.
+      admit.
+    - subst.
+      admit.
+    - subst. exists T. 
         
 Admitted.
 

@@ -1362,7 +1362,7 @@ Proof.
       destruct H. destruct H as (t,(Ha,(Hb,Hc))). subst. left. easy.
       destruct H as (t,(Ha,(Hb,Hc))). subst. right. easy.
 Qed.
-
+(* 
 Lemma usedCtx_cont_helper : forall G Gl ctxG0 ctxG1 ctxG,
       usedCtx ctxG1 G -> 
       Forall3S
@@ -1392,7 +1392,7 @@ Proof.
   - inversion H1. subst. constructor; try easy. clear H1 H8.
     revert H9 H0 H2 H. revert p q xs ctxG1 ctxG. clear ctxG0.
 
-Admitted.
+Admitted. *)
 
 Lemma usedCtx_cont : forall xs p q ys0 ctxG,
     typ_gtth ctxG (gtth_send p q xs) (gtt_send p q ys0) -> 
@@ -1465,7 +1465,7 @@ Proof.
     constructor. left. easy. apply IHn; try easy.
   - inversion H5. subst.
   
-    
+    specialize(usedCtx_cont xs p q ys0 ctxG H5 H2); intros.
   
   admit.
   
