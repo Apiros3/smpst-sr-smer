@@ -5,11 +5,22 @@ From Paco Require Import paco pacotac.
 Require Import Setoid Morphisms Coq.Program.Basics.
 Require Import Coq.Init.Datatypes.
 
+Inductive merge2 : ltt -> ltt -> ltt -> Prop := 
+  | mrg_id : forall x, merge2 x x x
+  | mrg_bra : forall p xs ys IJ, 
+                Forall3S (fun u v w => 
+                  (u = None /\ v = None /\ w = None) \/
+                  (exists t, u = None /\ v = Some t /\ w = Some t) \/
+                  (exists t, u = Some t /\ v = None /\ w = Some t) \/
+                  (exists t, u = Some t /\ v = Some t /\ w = Some t)) xs ys IJ -> 
+                  SList xs -> SList ys ->
+              merge2 (ltt_recv p xs) (ltt_recv p ys) (ltt_recv p IJ).
 
 Inductive isMerge : ltt -> list (option ltt) -> Prop :=
   | matm : forall t, isMerge t (Some t :: nil)
   | mconsn : forall t xs, isMerge t xs -> isMerge t (None :: xs) 
-  | mconss : forall t xs, isMerge t xs -> isMerge t (Some t :: xs). 
+  | mconss : forall t t' t'' xs, isMerge t xs -> merge2 t t' t'' -> isMerge t'' (Some t' :: xs). 
+
 
 Lemma merge_end_back : forall ys0 t,
     Forall (fun u : option ltt => u = None \/ u = Some ltt_end) ys0 -> 
@@ -38,7 +49,7 @@ Proof.
     apply IHxs; try easy.
 Qed.
 
-Lemma lttIso_inv : forall r p xs q ys,
+Lemma lttIso_inv : forall [r p xs q ys],
   (paco2 lttIso r (ltt_recv p xs) (ltt_recv q ys)) -> 
   p = q /\ List.Forall2 (fun u v => (u = None /\ v = None) \/ (exists s t t', u = Some(s, t) /\ v = Some(s, t') /\ upaco2 lttIso r t t')) xs ys.
   intros.
@@ -78,6 +89,27 @@ Lemma isMerge_injw : forall t t' r ys0 ys1,
         u = None /\ v = None \/
         (exists t t' : ltt, u = Some t /\ v = Some t' /\ paco2 lttIso r t t')) ys0 ys1 ->
     isMerge t ys0 -> isMerge t' ys1 -> paco2 lttIso r t t'.
+Proof.
+  intros t t' r ys0. revert t t' r.
+  induction ys0; intros; try easy. destruct ys1; try easy.
+  inversion H. subst. clear H.
+  inversion H0. subst. destruct ys1; try easy.
+  destruct H5; try easy. destruct H as (t1,(t2,(Ha,(Hb,Hc)))). inversion Ha. subst.
+  inversion H1. subst. easy. subst. inversion H4; try easy.
+  subst. destruct H5. destruct H. subst. inversion H1. subst.
+  specialize(IHys0 t t' r ys1 H7 H3 H5). easy.
+  destruct H as (t1,(t2,(Ha,(Hb,Hc)))). easy.
+  subst.
+  destruct H5; try easy. destruct H as (t1,(t2,(Ha,(Hb,Hc)))). inversion Ha. subst.
+  inversion H1. subst. inversion H0. subst. inversion H4. 
+  subst. destruct ys0; try easy. subst.
+  specialize(IHys0 t0 t3 r ys1 H7 H4 H5). clear H0 H1 H4 H5 H7 Ha.
+  
+  inversion H6. subst. inversion H8; try easy. subst. easy.
+  subst. pinversion IHys0; try easy. subst. 
+  apply lttIso_inv_b; try easy.
+  specialize(lttIso_inv Hc); intros. destruct H2. 
+  
 Admitted.
 
 Lemma _a_29_part_helper_recv : forall n ys1 x4 p ys,
@@ -115,7 +147,8 @@ Qed.
 
 Lemma triv_merge3 : forall T xs, isMerge T xs -> isMerge T (Some T :: xs).
 Proof. intros.
-       constructor. easy.
+       apply mconss with (t := T); try easy.
+       constructor. 
 Qed.
 
 (* needed *)
@@ -140,7 +173,8 @@ Proof.
   inversion H.
   - subst. constructor; try easy. right. easy.
   - subst. specialize(IHys0 H2). constructor; try easy. left. easy.
-  - subst. specialize(IHys0 H2). constructor; try easy. right. easy.
+  - subst. inversion H4. subst.
+    specialize(IHys0 H3). constructor; try easy. right. easy.
 Qed.
 
 (* need *)
@@ -208,4 +242,27 @@ Lemma merge_label_send_s : forall Mq LP' LP0' T k l q,
           onth l LP' = Some T. 
 Admitted.
 
+Lemma merge_sorts : forall ys0 ys1 p q PT QT,
+    Forall2
+      (fun u v : option ltt =>
+       u = None /\ v = None \/
+       (exists lis1 lis2 : seq.seq (option (sort * ltt)),
+          u = Some (ltt_recv p lis1) /\
+          v = Some (ltt_send q lis2) /\
+          Forall2
+            (fun u0 v0 : option (sort * ltt) =>
+             u0 = None /\ v0 = None \/
+             (exists (s : sort) (t t' : ltt), u0 = Some (s, t) /\ v0 = Some (s, t'))) lis2 lis1)) ys0 ys1 -> 
+    isMerge (ltt_recv p QT) ys0 -> 
+    isMerge (ltt_send q PT) ys1 -> 
+    Forall2
+      (fun u v : option (sort * ltt) =>
+       u = None /\ v = None \/ (exists (s : sort) (g g' : ltt), u = Some (s, g) /\ v = Some (s, g'))) PT QT.
+Admitted.
+ 
+ 
+ 
+ 
+ 
+ 
  
