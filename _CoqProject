@@ -6,6 +6,7 @@ type/local.v
 type/global.v
 type/isomorphism.v
 type/merge.v
+type/decidability.v
 type/projection.v
 type/proj_part.v
 process/processes.v

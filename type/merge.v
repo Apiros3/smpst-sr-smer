@@ -12,16 +12,19 @@ Inductive isMerge : ltt -> list (option ltt) -> Prop :=
   | mconss : forall t xs, isMerge t xs -> isMerge t (Some t :: xs). 
 
 
-Lemma merge_end_back : forall ys0 t,
-    Forall (fun u : option ltt => u = None \/ u = Some ltt_end) ys0 -> 
+Lemma merge_end_back : forall n ys0 t,
+    onth n ys0 = Some ltt_end -> 
     isMerge t ys0 -> 
     t = ltt_end.
 Proof.
-  induction ys0; intros; try easy.
-  inversion H. subst. inversion H0. subst. 
-  - destruct H3; try easy. inversion H1. subst. easy.
-  - subst. specialize(IHys0 t H4 H5). easy.
-  - subst. destruct H3; try easy. inversion H1. easy.
+  induction n; intros; try easy.
+  - destruct ys0; try easy. 
+    simpl in H. subst. inversion H0. subst. easy. easy.
+  - destruct ys0; try easy.
+    inversion H0. subst. 
+    - destruct n; try easy.
+    - subst. specialize(IHn ys0 t). apply IHn; try easy.
+    - subst. specialize(IHn ys0 t). apply IHn; try easy.
 Qed.
 
 
@@ -186,6 +189,7 @@ Proof.
   - subst. constructor; try easy. right. easy. 
     apply IHys0; try easy.
 Qed.
+
 
 (* need *)
 Lemma merge_label_recv : forall Mp LQ' LQ0' T k l p,

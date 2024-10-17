@@ -56,44 +56,6 @@ Qed.
 
 
 
-Lemma ishParts_x : forall [p s1 s2 o1 o2 xs0],
-    (ishParts p (gtth_send s1 s2 (Some (o1,o2) :: xs0)) -> False) ->
-    (ishParts p o2 -> False).
-Proof.
-  intros. apply H. 
-  - case_eq (eqb p s1); intros.
-    assert (p = s1). apply eqb_eq; try easy. subst. apply ha_sendp.
-  - case_eq (eqb p s2); intros.
-    assert (p = s2). apply eqb_eq; try easy. subst. apply ha_sendq.
-  - assert (p <> s1). apply eqb_neq; try easy. 
-    assert (p <> s2). apply eqb_neq; try easy.
-    apply ha_sendr with (n := 0) (s := o1) (g := o2); try easy.
-Qed.
-
-Lemma isgParts_xs : forall [s s' x o p],
-    isgParts p (g_send s s' x) ->
-    isgParts p (g_send s s' (o :: x)).
-Proof.
-  intros. inversion H. subst. 
-  constructor. 
-  subst. constructor.
-  subst. apply pa_sendr with (n := Nat.succ n) (s := s0) (g := g); try easy.
-Qed.
-
-Lemma isgParts_x : forall [s s' x s0 g p],
-    isgParts p g -> 
-    isgParts p (g_send s s' (Some (s0, g) :: x)).
-Proof.
-    intros.
-    - case_eq (eqb p s); intros.
-      assert (p = s). apply eqb_eq; try easy. subst. apply pa_sendp.
-    - case_eq (eqb p s'); intros.
-      assert (p = s'). apply eqb_eq; try easy. subst. apply pa_sendq.
-    - assert (p <> s). apply eqb_neq; try easy. 
-      assert (p <> s'). apply eqb_neq; try easy.
-      apply pa_sendr with (n := 0) (s := s0) (g := g); try easy.
-Qed.
-
 
 Lemma proj_inv_lis_helper : forall n ys s0 g xs ys0 ys1 ctxG p q,
     onth n ys = Some (s0, g) -> 
