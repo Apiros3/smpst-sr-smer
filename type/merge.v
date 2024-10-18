@@ -27,6 +27,17 @@ Proof.
     - subst. specialize(IHn ys0 t). apply IHn; try easy.
 Qed.
 
+Lemma merge_end_s : forall x T,
+    Forall (fun u : option ltt => u = None \/ u = Some ltt_end) x -> 
+    isMerge T x -> T = ltt_end.
+Proof.
+  induction x; intros; try easy.
+  - inversion H. subst.
+    inversion H0. subst. destruct H3; try easy. inversion H1; try easy.
+    subst. specialize(IHx T). apply IHx; try easy.
+    subst. specialize(IHx T). apply IHx; try easy.
+Qed.
+
 
 Lemma Iso_mon : monotone2 lttIso.
 Proof.

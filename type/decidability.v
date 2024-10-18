@@ -692,7 +692,146 @@ Proof.
       apply gttT_mon.
 Qed.
   
+
+
+Lemma part_cont : forall ys r p q,
+    isgPartsC r (gtt_send p q ys) -> 
+    r <> p -> r <> q ->
+    exists n s g, onth n ys = Some(s, g) /\ isgPartsC r g.
+Proof.
+  induction ys; intros; try easy.
+  - specialize(part_break_s (gtt_send p q []) r H); intros.
+    destruct H2 as (Gl,(Ha,(Hb,Hc))). 
+    destruct Hc. subst. pinversion Ha; try easy. 
+    destruct H2 as (p1,(q1,(lis,Hc))). subst. pinversion Ha; try easy. subst. destruct lis; try easy.
+    inversion Hb.
+    - subst. easy. 
+    - subst. easy.
+    - destruct n; try easy.
+    apply gttT_mon.
+  - specialize(part_break_s2 (gtt_send p q (a :: ys)) r H); intros.
+    destruct H2 as (Gl,(Ha,(Hb,(Hc,Hd)))). 
+    destruct Hd. subst. pinversion Ha; try easy. 
+    destruct H2 as (p1,(q1,(lis,He))). subst. pinversion Ha; try easy. subst. destruct lis; try easy.
+    inversion H3. subst. clear H3.
+    inversion Hb; try easy. subst.
+    destruct n.
+    - simpl in H10. subst.
+      destruct H6; try easy. destruct H2 as (s1,(g1,(g2,(Hsa,(Hsb,Hsc))))). inversion Hsa. subst.
+      exists 0. exists s1. exists g2. split; try easy.
+      unfold isgPartsC. exists g1. destruct Hsc; try easy. 
+      specialize(guard_cont Hc); intros. inversion H3. subst.
+      destruct H7; try easy. destruct H4 as (s2,(g3,(Hma,Hmb))). inversion Hma. subst.
+      easy.
+    - specialize(IHys r p q).
+      assert(exists (n : fin) (s : sort) (g : gtt), onth n ys = Some (s, g) /\ isgPartsC r g).
+      {
+        apply IHys; try easy.
+        unfold isgPartsC. exists (g_send p q lis).
+        split. pfold. constructor; try easy.
+        split. 
+        apply guard_cont_b. specialize(guard_cont Hc); intros. inversion H2; try easy.
+        apply pa_sendr with (n := n) (s := s) (g := g); try easy.
+      }
+      destruct H2. exists (S x). easy.
+    apply gttT_mon.
+Qed.
+  
+
+Lemma part_cont_b : forall n ys s g r p q,
+    onth n ys = Some(s, g) ->
+    isgPartsC r g ->
+    r <> p -> r <> q -> 
+    wfgC (gtt_send p q ys) -> 
+    isgPartsC r (gtt_send p q ys).
+Proof.
+  intros.
+  unfold wfgC in H3.
+  destruct H3 as (Gl,(Ha,(Hb,(Hc,Hd)))).
+  unfold isgPartsC in *. destruct H0 as (G1,(He,(Hf,Hg))).
+  pinversion Ha; try easy.
+  - subst.
+    exists (g_send p q (overwrite_lis n (Some (s, G1)) xs)).
+    specialize(guard_cont Hc); intros. clear Hc Ha Hb Hd.
+    revert H0 H4 Hg Hf He H H1 H2. revert xs G1 r p q g s ys.
+    induction n; intros; try easy.
+    - destruct ys; try easy. destruct xs; try easy.
+      inversion H0. subst. clear H0. inversion H4. subst. clear H4.
+      simpl in H. subst. destruct H8; try easy. destruct H as (s1,(g1,(g2,(Ha,(Hb,Hc))))).
+      inversion Hb. subst.
+      destruct H6; try easy. destruct H as (s2,(g3,(Hi,Hh))). inversion Hi. subst.
+      pclearbot.
+      - split. pfold. constructor; try easy. constructor; try easy.
+        right. exists s2. exists G1. exists g2.
+        split. easy. split. easy. left. easy.
+      - split. apply guard_cont_b. constructor; try easy. right.
+        exists s2. exists G1. easy.
+      - apply pa_sendr with (n := 0) (s := s2) (g := G1); try easy.
+    - destruct ys; try easy. destruct xs; try easy.
+      inversion H0. subst. clear H0. inversion H4. subst. clear H4.
+      assert(gttTC (g_send p q (overwrite_lis n (Some (s, G1)) xs)) (gtt_send p q ys) /\
+      (forall n0 : fin, exists m : fin, guardG n0 m (g_send p q (overwrite_lis n (Some (s, G1)) xs))) /\
+      isgParts r (g_send p q (overwrite_lis n (Some (s, G1)) xs))).
+      specialize(IHn xs G1 r p q g s ys). apply IHn; try easy. clear IHn.
+      destruct H0 as (Hta,(Htb,Htc)).
+      - split. pfold. constructor. 
+        pinversion Hta; try easy. subst. constructor; try easy. apply gttT_mon.
+      - split. apply guard_cont_b. specialize(guard_cont Htb); intros.
+        constructor; try easy.
+      - inversion Htc; try easy. subst.
+        apply pa_sendr with (n := S n0) (s := s0) (g := g0); try easy.
+  - subst.
+    clear H0 H3.
+    specialize(guard_breakG G Hc); intros.
+    destruct H0 as (Gl,(Hh,(Hi,Hj))).
+    specialize(gttTC_after_subst (g_rec G) Gl (gtt_send p q ys)); intros.
+    assert(gttTC Gl (gtt_send p q ys)). apply H0; try easy. pfold. easy.
+    clear H0. destruct Hj. subst. pinversion H3. apply gttT_mon.
+    destruct H0 as (p1,(q1,(lis,Hj))). subst. pinversion H3; try easy. subst.
+    specialize(guardG_betaG (g_rec G) (g_send p q lis)); intros.
+    exists (g_send p q (overwrite_lis n (Some (s, G1)) lis)).
+    clear H0 H3 Hh Hd Ha Hb Hc.
+    specialize(guard_cont Hi); intros. clear Hi.
+    revert H0 H4 H2 H1 Hg Hf He H.
+    revert ys s g r p q G1 lis. clear G Q.
+    induction n; intros; try easy.
+    - destruct ys; try easy. destruct lis; try easy.
+      inversion H0. subst. clear H0. inversion H4. subst. clear H4.
+      simpl in H. subst. destruct H8; try easy. destruct H as (s1,(g1,(g2,(Ha,(Hb,Hc))))).
+      inversion Hb. subst.
+      destruct H6; try easy. destruct H as (s2,(g3,(Hi,Hh))). inversion Hi. subst.
+      pclearbot.
+      - split. pfold. constructor; try easy. constructor; try easy.
+        right. exists s2. exists G1. exists g2.
+        split. easy. split. easy. left. easy.
+      - split. apply guard_cont_b. constructor; try easy. right.
+        exists s2. exists G1. easy.
+      - apply pa_sendr with (n := 0) (s := s2) (g := G1); try easy.
+    - destruct ys; try easy. destruct lis; try easy.
+      inversion H0. subst. clear H0. inversion H4. subst. clear H4.
+      assert(gttTC (g_send p q (overwrite_lis n (Some (s, G1)) lis)) (gtt_send p q ys) /\
+      (forall n0 : fin, exists m : fin, guardG n0 m (g_send p q (overwrite_lis n (Some (s, G1)) lis))) /\
+      isgParts r (g_send p q (overwrite_lis n (Some (s, G1)) lis))).
+      specialize(IHn ys s g r p q G1 lis). apply IHn; try easy. clear IHn.
+      destruct H0 as (Hta,(Htb,Htc)).
+      - split. pfold. constructor. 
+        pinversion Hta; try easy. subst. constructor; try easy. apply gttT_mon.
+      - split. apply guard_cont_b. specialize(guard_cont Htb); intros.
+        constructor; try easy.
+      - inversion Htc; try easy. subst.
+        apply pa_sendr with (n := S n0) (s := s0) (g := g0); try easy.
+    apply gttT_mon.
+    apply gttT_mon.
+Qed.
   
   
   
+  
+  
+  
+
+
+
+
+
   
