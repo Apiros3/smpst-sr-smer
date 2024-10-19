@@ -129,14 +129,6 @@ Lemma balanced_cont : forall [lsg p q],
     balancedG (gtt_send p q lsg) -> List.Forall (fun u => u = None \/ (exists s g, u = Some(s, g) /\ balancedG g)) lsg.
 Admitted.
 
-Lemma balanced_cont_b : forall ys0 s s',
-    Forall
-       (fun u : option (sort * gtt) =>
-        u = None \/ (exists (s : sort) (g : gtt), u = Some (s, g) /\ balancedG g))
-       ys0 -> 
-    balancedG (gtt_send s s' ys0).
-Admitted.
-
 Lemma wfgC_after_step_helper : forall n0 s G' lsg lis1, 
       Some (s, G') = onth n0 lsg -> 
       Forall2
@@ -303,6 +295,30 @@ Proof.
       apply step_mon.
 Qed.
 
+
+
+Lemma step_gtth : forall G G' p q l,
+    wfgC G -> 
+    gttstepC G G' p q l -> 
+    exists ctxG ctxG2 Gl, typ_gtth ctxG Gl G /\ typ_gtth ctxG2 Gl G' /\
+    (ishParts p Gl -> False) /\ (ishParts q Gl -> False) /\ 
+    Forall2 (fun u v => (u = None /\ v = None) \/ (exists p q lis s g, u = Some (gtt_send p q lis) /\ onth l lis = Some(s, g) /\ v = Some g)) ctxG ctxG2.
+Admitted.
+
+
+
+Lemma balanced_step : forall [G G' p q l],
+    wfgC G -> 
+    gttstepC G G' p q l -> 
+    balancedG G'.
+Proof.
+  intros.
+  specialize(step_gtth G G' p q l H H0); intros.
+  unfold wfgC in H. destruct H as (Gl,(Ha,(Hb,(Hc,H)))). clear Ha Hb Hc. clear Gl.
+  destruct H1 as (ctxG,(ctxG2,(Gl,(Ha,(Hb,(Hc,(Hd,He))))))).
+  
+Admitted.
+
 Lemma wfgC_after_step : forall G G' p q n, wfgC G -> gttstepC G G' p q n -> wfgC G'. 
 Proof.
   intros. 
@@ -394,6 +410,13 @@ Proof.
         left. easy.
     }
     specialize(wfgC_after_step_helper2 lis ys ys0 n p q H13 H2 H17); intros.
+    assert(wfgC (gtt_send s s' ys) /\ gttstepC (gtt_send s s' ys) (gtt_send s s' ys0) p q n). 
+    {
+      unfold wfgC. split. exists (g_send s s' lis). split. pfold. easy. easy.
+      pfold. easy.
+    }
+    destruct H19.
+    specialize(balanced_step H19 H20); intros. clear H19 H20. rename H21 into Ht.
     clear H3 H1 H15 H2 Hb Hc He H17 H16 H11 H10 H9 H8 H5 H4 H7 Hta H0 Hd Htb Htc H H6 H13.
     clear p q xs n ctxG ys lis. rename H14 into H. rename H12 into H1.
     assert(exists xs, List.Forall2 (fun u v => (u = None /\ v = None) \/ (exists s g g', u = Some(s, g) /\ v = Some(s, g') /\ gttTC g g')) xs ys0 /\ 
@@ -401,7 +424,7 @@ Proof.
     List.Forall (fun u => u = None \/ (exists s g, u = Some(s, g) /\ wfG g)) xs /\
     List.Forall (fun u => u = None \/ (exists s g, u = Some(s, g) /\ (forall n, exists m, guardG n m g))) xs).
     {
-      clear H. revert H1. clear H18. revert ys0. clear s s'.
+      clear H. revert H1. clear H18. clear Ht. revert ys0. clear s s'.
       induction ys0; intros; try easy.
       - exists nil. easy.
       - inversion H1. subst. clear H1.
@@ -430,7 +453,7 @@ Proof.
       specialize(wfgC_after_step_helper3 ys0 xs H18 Ha); try easy.
     - split.
       apply guard_cont_b; try easy.
-    - apply balanced_cont_b; try easy.
+    - easy.
     apply gttT_mon.
     apply step_mon.
 Qed.
@@ -1194,19 +1217,28 @@ Proof.
 
 Admitted. *)
 
-Lemma usedCtx_cont : forall xs p q ys0 ctxG,
-    typ_gtth ctxG (gtth_send p q xs) (gtt_send p q ys0) -> 
-    usedCtx ctxG (gtth_send p q xs) ->
-    List.Forall2 (fun u v => (u = None /\ v = None) \/ (exists s g g' ctxGi, u = Some(s, g) /\ v = Some(s, g') /\ typ_gtth ctxGi g g' /\ usedCtx ctxGi g)) xs ys0.
-Proof.
-  intros. inversion H. subst. clear H4 H. revert H7 H0. revert p q ys0 ctxG.
-  induction xs; intros.
-  - destruct ys0; try easy.
-  - destruct ys0; try easy.
-    inversion H7. subst. clear H7.
-    - inversion H0. subst. 
-      
-      
+Inductive Forall3 {A B C} : (A -> B -> C -> Prop) -> list A -> list B -> list C -> Prop := 
+  | Forall3_nil : forall P, Forall3 P nil nil nil
+  | Forall3_cons : forall P a b c xa xb xc, P a b c -> Forall3 P xa xb xc -> Forall3 P (a :: xa) (b :: xb) (c :: xc).
+
+Inductive isMergeCtx : list (option gtt) -> list (option (list (option gtt))) -> Prop :=   
+  | cmatm : forall t, isMergeCtx t (Some t :: nil)
+  | cmconsn : forall t xs, isMergeCtx t xs -> isMergeCtx t (None :: xs) 
+  | cmconss : forall t t' t'' xs, 
+      Forall3S (fun u v w => 
+        (u = None /\ v = None /\ w = None) \/
+        (exists t, u = None /\ v = Some t /\ w = Some t) \/
+        (exists t, u = Some t /\ v = None /\ w = Some t) \/
+        (exists t, u = Some t /\ v = Some t /\ w = Some t)
+      ) t t' t'' ->
+      isMergeCtx t xs -> isMergeCtx t'' (Some t' :: xs). 
+
+Lemma ctx_back : forall s s' xs ys0 ctxG,
+      typ_gtth ctxG (gtth_send s s' xs) (gtt_send s s' ys0) -> 
+      usedCtx ctxG (gtth_send s s' xs) -> 
+      exists ctxGLis, 
+      Forall3 (fun u v w => (u = None /\ v = None /\ w = None) \/ (exists ct s g g', u = Some ct /\ v = Some(s, g) /\ w = Some(s, g') /\ typ_gtth ct g g' /\ usedCtx ct g)) ctxGLis xs ys0 /\
+      isMergeCtx ctxG ctxGLis.
 Admitted.
 
 Lemma _a_29_16 : forall G' ctxG G p q ys x, 
@@ -1263,11 +1295,43 @@ Proof.
     simpl in *. inversion H0. subst. clear H0.
     specialize(IHn G p q ys x G0 H4).
     constructor. left. easy. apply IHn; try easy.
-  - inversion H5. subst.
-  
-    specialize(usedCtx_cont xs p q ys0 ctxG H5 H2); intros.
-  
-  admit.
+  - inversion H5. subst. 
+    pinversion H0. subst.
+    - assert False. apply H3. constructor. easy.
+    - subst. rename p into s. rename q into s'. rename p0 into p. rename q0 into q.
+      clear H14.
+      clear H12.
+      specialize(ctx_back s s' xs ys0 ctxG H5 H2); intros.
+      destruct H6 as (ctxGLis,(H6,H7)).
+      assert(Forall (fun u => u = None \/ exists ctxGi, u = Some ctxGi /\
+        Forall
+             (fun u0 : option gtt =>
+              u0 = None \/
+              (exists (g0 : gtt) (lsg : seq.seq (option (sort * gtt))),
+                 u0 = Some g0 /\
+                 g0 = gtt_send p q lsg /\
+                 Forall2
+                   (fun (u1 : option (sort * gtt)) (v : option (sort * ltt)) =>
+                    u1 = None /\ v = None \/
+                    (exists (s0 : sort) (t : ltt) (g' : gtt),
+                       u1 = Some (s0, g') /\ v = Some (s0, t) /\ projectionC g' p t)) lsg x /\
+                 Forall2
+                   (fun (u1 : option (sort * gtt)) (v : option (sort * ltt)) =>
+                    u1 = None /\ v = None \/
+                    (exists (s0 : sort) (t : ltt) (g' : gtt),
+                       u1 = Some (s0, g') /\ v = Some (s0, t) /\ projectionC g' q t)) lsg ys)) ctxGi
+      ) ctxGLis).
+      {
+        apply Forall_forall; intros.
+        destruct x0. right.
+        specialize(in_some_implies_onth l ctxGLis H8); intros.
+        destruct H12 as (n, H12). rename l into ctxGi. exists ctxGi. split. easy.
+        clear H8. clear H11 H9 H10 H13 H5 H2 H7.
+        admit.
+        left. easy.
+      }
+      admit.
+  apply proj_mon.
   
 Admitted.
 

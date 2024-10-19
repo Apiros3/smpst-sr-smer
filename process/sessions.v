@@ -8,6 +8,14 @@ Inductive session: Type :=
   | s_ind : part   -> process -> session
   | s_par : session -> session -> session.
   
+Inductive guardP : fin -> fin -> process -> Prop :=  
+  | gp_nil : forall m G, guardP 0 m G
+  | gp_inact : forall n m, guardP n m p_inact
+  | gp_send : forall n m pt l e g, guardP n m g -> guardP (S n) m (p_send pt l e g)
+  | gp_recv : forall n m p lis, List.Forall (fun u => u = None \/ (exists g, u = Some g /\ guardP n m g)) lis -> guardP (S n) m (p_recv p lis)
+  | gp_ite : forall n m P Q e, guardP n m P -> guardP n m Q -> guardP n (S m) (p_ite e P Q)
+  | gp_rec : forall n m g Q, substitutionP 0 0 0 (p_rec g) g Q -> guardP n m Q -> guardP n (S m) (p_rec g).
+
 Notation "p '<--' P"   :=  (s_ind p P) (at level 50, no associativity).
 Notation "s1 '|||' s2" :=  (s_par s1 s2) (at level 50, no associativity).
 
@@ -28,7 +36,7 @@ Inductive typ_sess : session -> gtt -> Prop :=
   | t_sess : forall M G, wfgC G ->
                          (forall pt, isgPartsC pt G -> InT pt M) ->
                          NoDup (flattenT M) ->
-                         ForallT (fun u P => exists T, projectionC G u T /\ typ_proc nil nil P T) M ->
+                         ForallT (fun u P => exists T, projectionC G u T /\ typ_proc nil nil P T /\ (forall n, exists m, guardP n m P)) M ->
                          typ_sess M G.
 
 
@@ -333,7 +341,7 @@ Proof.
   - inversion H0. subst.
     inversion H4. subst. clear H4. inversion H7. subst. clear H7. 
     apply t_sess; try easy. constructor; try easy. constructor; try easy.
-    destruct H5. exists x. split; try easy. destruct H4.
+    destruct H5. exists x. split; try easy. destruct H4. split.
     apply _a22_1 with (P := P); try easy.
   - inversion H. subst. inversion H3. subst. clear H3.
     inversion H6. subst. clear H6. destruct H4. destruct H3.

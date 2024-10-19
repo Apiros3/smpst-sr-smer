@@ -793,3 +793,14 @@ Proof.
   specialize(trivial_incr 0 0 Q); intros.
   replace (incr_free 0 0 0 0 Q) with Q. easy.
 Qed.
+
+
+
+
+
+
+
+
+
+
+
