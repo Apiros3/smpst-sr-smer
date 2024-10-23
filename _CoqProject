@@ -11,6 +11,7 @@ type/merge.v
 type/projection.v
 type/step.v
 type/proj_part.v
+type/wfgC_after_step.v
 process/processes.v
 process/typecheck.v
 process/inversion.v

@@ -374,11 +374,3 @@ Proof.
 
     constructor. easy. constructor; try easy.
 Admitted.
-
-(* Declare Instance Equivalence_pcong : Equivalence scongP. 
-Declare Instance Equivalence_scong : Equivalence scong.
-
-Inductive sForall (P: session -> Prop): session -> Prop :=
-  | fsind: forall p proc, sForall P (p <-- proc)
-  | fspar: forall (S R: session), P S -> P R -> sForall P (S ||| R).
- *)
