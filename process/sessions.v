@@ -69,17 +69,17 @@ Qed.
 
 Definition stepE_multi := multi stepE.
    
-Inductive scongP : relation process := 
-  | pc_inact : scongP p_inact p_inact
-  | pc_var   : forall n, scongP (p_var n) (p_var n)
-  | pc_mu    : forall X Y, scongP X Y -> scongP (p_rec X) (p_rec Y)
-  | pc_ite   : forall e X X' Y Y', scongP X X' -> scongP Y Y' -> scongP (p_ite e X Y) (p_ite e X' Y')
-  | pc_recv  : forall pt xs ys, Forall2 (fun u v => (u = None /\ v = None) \/ (exists P Q, u = Some P /\ v = Some Q /\ scongP P Q)) xs ys -> scongP (p_recv pt xs) (p_recv pt ys)
-  | pc_send  : forall pt lb e X X', scongP X X' -> scongP (p_send pt lb e X) (p_send pt lb e X')
-  | pc_sub   : forall P Q, substitutionP 0 0 0 (p_rec P) P Q -> scongP (p_rec P) Q
-  | pc_trans : forall P Q R, scongP P Q -> scongP Q R -> scongP P R.
+Inductive unfoldP : relation process := 
+  | pc_inact : unfoldP p_inact p_inact
+  | pc_var   : forall n, unfoldP (p_var n) (p_var n)
+  | pc_mu    : forall X Y, unfoldP X Y -> unfoldP (p_rec X) (p_rec Y)
+  | pc_ite   : forall e X X' Y Y', unfoldP X X' -> unfoldP Y Y' -> unfoldP (p_ite e X Y) (p_ite e X' Y')
+  | pc_recv  : forall pt xs ys, Forall2 (fun u v => (u = None /\ v = None) \/ (exists P Q, u = Some P /\ v = Some Q /\ unfoldP P Q)) xs ys -> unfoldP (p_recv pt xs) (p_recv pt ys)
+  | pc_send  : forall pt lb e X X', unfoldP X X' -> unfoldP (p_send pt lb e X) (p_send pt lb e X')
+  | pc_sub   : forall P Q, substitutionP 0 0 0 (p_rec P) P Q -> unfoldP (p_rec P) Q
+  | pc_trans : forall P Q R, unfoldP P Q -> unfoldP Q R -> unfoldP P R.
 
-Section scongP_ind_ref.
+Section unfoldP_ind_ref.
   Variable P : process -> process -> Prop.
   Hypothesis P_inact : P p_inact p_inact.
   Hypothesis P_var   : forall n, P (p_var n) (p_var n).
@@ -90,28 +90,28 @@ Section scongP_ind_ref.
   Hypothesis P_sub   : forall X Y, substitutionP 0 0 0 (p_rec X) X Y -> P (p_rec X) Y.
   Hypothesis P_trans : forall X Y Z, P X Y -> P Y Z -> P X Z.
   
-  Fixpoint scongP_ind_ref (X Y : process) (a : scongP X Y) {struct a} : P X Y.
+  Fixpoint unfoldP_ind_ref (X Y : process) (a : unfoldP X Y) {struct a} : P X Y.
   Proof.
     refine (match a with
       | pc_inact => P_inact
       | pc_var n => P_var n 
-      | pc_mu X Y Hp => P_mu X Y (scongP_ind_ref X Y Hp)
-      | pc_ite e X X' Y Y' Hx Hy => P_ite e X X' Y Y' (scongP_ind_ref X X' Hx) (scongP_ind_ref Y Y' Hy)
+      | pc_mu X Y Hp => P_mu X Y (unfoldP_ind_ref X Y Hp)
+      | pc_ite e X X' Y Y' Hx Hy => P_ite e X X' Y Y' (unfoldP_ind_ref X X' Hx) (unfoldP_ind_ref Y Y' Hy)
       | pc_recv pt xs ys Ha => P_recv pt xs ys _
-      | pc_send pt lb e X X' Hx => P_send pt lb e X X' (scongP_ind_ref X X' Hx)
+      | pc_send pt lb e X X' Hx => P_send pt lb e X X' (unfoldP_ind_ref X X' Hx)
       | pc_sub X Y Hs => P_sub X Y Hs
-      | pc_trans X Y Z Hxy Hyz => P_trans X Y Z (scongP_ind_ref X Y Hxy) (scongP_ind_ref Y Z Hyz)
+      | pc_trans X Y Z Hxy Hyz => P_trans X Y Z (unfoldP_ind_ref X Y Hxy) (unfoldP_ind_ref Y Z Hyz)
     end); try easy.
     revert Ha. apply Forall2_mono. intros.
     destruct H. left. easy.
     destruct H. destruct H. destruct H. destruct H0. subst. right.
     exists x0. exists x1. split; try easy. split; try easy.
-    apply scongP_ind_ref; try easy.
+    apply unfoldP_ind_ref; try easy.
   Qed.
-End scongP_ind_ref.
+End unfoldP_ind_ref.
 
 Inductive scong: relation session :=
-  | sc_multi: forall p P Q M, scongP P Q -> scong (p <-- P ||| M) (p <-- Q ||| M) 
+  | sc_multi: forall p P Q M, unfoldP P Q -> scong (p <-- P ||| M) (p <-- Q ||| M) 
   | sc_par1 : forall p M, scong (p <-- p_inact ||| M) M
   | sc_par2 : forall M M', scong (M ||| M') (M' ||| M)
   | sc_par3 : forall M M' M'', scong ((M ||| M') ||| M'') (M ||| (M' ||| M'')).
@@ -248,29 +248,29 @@ Proof.
       apply typable_implies_wfC with (P := (p_recv pt (a :: xs))) (Gs := Gs) (Gt := Gt); try easy.
 Qed.
 
-Lemma _a22_1 : forall Gs Gt P Q T, typ_proc Gs Gt P T -> scongP P Q -> typ_proc Gs Gt Q T.
+Lemma _a22_1 : forall Gs Gt P Q T, typ_proc Gs Gt P T -> unfoldP P Q -> typ_proc Gs Gt Q T.
 Proof.
   intros. revert H. revert Gs Gt T.
-  induction H0 using scongP_ind_ref; intros; try easy.
+  induction H0 using unfoldP_ind_ref; intros; try easy.
   - specialize(_a23_d (p_rec X) X T Gs Gt H (eq_refl (p_rec X))); intros.
     destruct H0. destruct H0. 
-    specialize(IHscongP Gs (Some x :: Gt) x H0).
+    specialize(IHunfoldP Gs (Some x :: Gt) x H0).
     apply tc_sub with (t := x); try easy.
     apply tc_mu; try easy.
     apply typable_implies_wfC with (P := p_rec X) (Gs := Gs) (Gt := Gt); try easy.
   - specialize(_a23_c (p_ite e X Y) e X Y T Gs Gt H (eq_refl (p_ite e X Y))); intros.
     destruct H0. destruct H0. destruct H0. destruct H1. destruct H2. destruct H3.
     apply tc_ite. easy.
-    apply IHscongP; try easy. apply tc_sub with (t := x); try easy.
+    apply IHunfoldP; try easy. apply tc_sub with (t := x); try easy.
     apply typable_implies_wfC with (P := p_ite e X Y) (Gs := Gs) (Gt := Gt); try easy.
-    apply IHscongP0; try easy. apply tc_sub with (t := x0); try easy.
+    apply IHunfoldP0; try easy. apply tc_sub with (t := x0); try easy.
     apply typable_implies_wfC with (P := p_ite e X Y) (Gs := Gs) (Gt := Gt); try easy.
   - apply _a22_2_helperP_h with (xs := xs); try easy.
   - specialize(_a23_bf pt lb e X (p_send pt lb e X) Gs Gt T H (eq_refl (p_send pt lb e X))); intros.
     destruct H0. destruct H0. destruct H0. destruct H1.
     apply tc_sub with (t := (ltt_send pt (extendLis lb (Some (x, x0))))); try easy.
     apply tc_send; try easy.
-    apply IHscongP; try easy.
+    apply IHunfoldP; try easy.
     apply typable_implies_wfC with (P := p_send pt lb e X) (Gs := Gs) (Gt := Gt). easy.
   - specialize(_a23_d (p_rec X) X T Gs Gt H0 (eq_refl (p_rec X))); intros.
     destruct H1. destruct H1.  
@@ -279,7 +279,7 @@ Proof.
     apply H3 with (T := x); try easy.
     apply tc_mu; intros; try easy.
     apply typable_implies_wfC with (P := p_rec X) (Gs := Gs) (Gt := Gt); try easy.
-  - apply IHscongP0; try easy. apply IHscongP; try easy.
+  - apply IHunfoldP0; try easy. apply IHunfoldP; try easy.
 Qed.
 
 Lemma noin_mid {A} : forall (l1 l2 : list A) a a0, ~ In a0 (l1 ++ a :: l2) -> ~ In a0 (l1 ++ l2) /\ a <> a0.
@@ -303,6 +303,18 @@ Proof.
   simpl in H. destruct H. right. left. easy.
   specialize(IHl1 l2 a0 pt H); intros. destruct IHl1. left. easy.
   right. right. easy.
+Qed.
+
+Lemma in_or {A} : forall (l1 l2 : list A) pt, In pt (l1 ++ l2) -> In pt l1 \/ In pt l2.
+Proof.
+  induction l1; intros; try easy.
+  right. easy.
+  simpl in H.
+  destruct H.
+  - left. constructor. easy.
+  - specialize(IHl1 l2 pt H). destruct IHl1.
+    - left. right. easy.
+    - right. easy.
 Qed.
 
 Lemma noin_swap {A} : forall (l1 l2 : list A) a, ~ In a (l1 ++ l2) -> ~ In a (l2 ++ l1).
@@ -335,6 +347,12 @@ Proof.
   destruct H0. left. easy. right. apply IHl2; try easy.
 Qed.
 
+Lemma guardP_after_unf : forall P Q,
+    (forall n : fin, exists m : fin, guardP n m P) -> 
+    (unfoldP P Q) -> 
+    (forall n : fin, exists m : fin, guardP n m Q).
+Admitted.
+
 Lemma _a22_2 : forall M M' G, typ_sess M G -> scong M M' -> typ_sess M' G.
 Proof.
   intros. revert H. revert G. induction H0; intros; try easy.
@@ -343,7 +361,8 @@ Proof.
     apply t_sess; try easy. constructor; try easy. constructor; try easy.
     destruct H5. exists x. split; try easy. destruct H4. split.
     apply _a22_1 with (P := P); try easy.
-    admit.
+    destruct H5.
+    specialize(guardP_after_unf P Q); intros. apply H7; try easy.
   - inversion H. subst. inversion H3. subst. clear H3.
     inversion H6. subst. clear H6. destruct H4. destruct H3.
     apply t_sess; try easy. destruct H4 as (H4, Ht).
@@ -373,4 +392,4 @@ Proof.
     easy.
 
     constructor. easy. constructor; try easy.
-Admitted.
+Qed.
