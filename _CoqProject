@@ -5,9 +5,11 @@ src/header.v
 type/local.v
 type/global.v
 type/isomorphism.v
-type/merge.v
 type/decidability.v
+type/global_tree_ctx.v
+type/merge.v
 type/projection.v
+type/step.v
 type/proj_part.v
 process/processes.v
 process/typecheck.v

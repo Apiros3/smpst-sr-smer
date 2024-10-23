@@ -31,70 +31,7 @@ Inductive lttmap : ltt -> list fin -> option fin -> lnode -> Prop :=
   | lmap_conr : forall n lis xs p st gk s gn, onth n xs = Some (st, gk) -> lttmap gk lis s gn -> lttmap (ltt_recv p xs) (n :: lis) s gn
   | lmap_sts  : forall n xs p st gk, onth n xs = Some(st, gk) -> lttmap (ltt_send p xs) nil (Some n) (lnode_s st)
   | lmap_str  : forall n xs p st gk, onth n xs = Some(st, gk) -> lttmap (ltt_recv p xs) nil (Some n) (lnode_s st).
- (* 
-CoInductive EqGtt (G1 G2 : gtt) : Prop := 
-  eqg_end : EqGtt gtt_end gtt_end 
-   
-
-Lemma fext_ltt : forall T T' lis sn x, lttmap T lis sn x -> lttmap T' lis sn x -> T = T'.
-Proof.
-   *)
-
-
-(* global trees with context holes *)
-Inductive gtth: Type :=
-  | gtth_hol    : fin -> gtth
-  | gtth_send   : part -> part -> list (option (sort * gtth)) -> gtth.
-
-Section gtth_ind_ref.
-  Variable P : gtth -> Prop.
-  Hypothesis P_hol : forall n, P (gtth_hol n).
-  Hypothesis P_send : forall p q xs, List.Forall (fun u => u = None \/ (exists s g, u = Some(s, g) /\ P g)) xs -> P (gtth_send p q xs).
-  
-  Fixpoint gtth_ind_ref p : P p.
-  Proof.
-    destruct p.
-    - apply P_hol.
-    - apply P_send.
-      induction l; intros; try easy.
-      constructor; try easy.
-      destruct a. 
-      - destruct p. right. exists s1. exists g. split. easy. apply gtth_ind_ref.
-      - left. easy.
-  Qed.
-
-End gtth_ind_ref.
-
-Inductive typ_gtth : list (option gtt) -> gtth -> gtt -> Prop := 
-  | gt_hol : forall n ctx gc, onth n ctx = Some gc -> typ_gtth ctx (gtth_hol n) gc
-  | gt_send : forall ctx p q xs ys, SList xs -> List.Forall2 (fun u v => (u = None /\ v = None) \/ 
-                                                (exists s g g', u = Some(s, g) /\ v = Some(s, g') /\ typ_gtth ctx g g')) xs ys -> 
-                                                typ_gtth ctx (gtth_send p q xs) (gtt_send p q ys).
-
-Section typ_gtth_ind_ref.
-  Variable P : list (option gtt) -> gtth -> gtt -> Prop.
-  Hypothesis P_hol : forall n ctx gc, onth n ctx = Some gc -> P ctx (gtth_hol n ) gc.
-  Hypothesis P_send : forall ctx p q xs ys, SList xs -> List.Forall2 (fun u v => (u = None /\ v = None) \/ 
-                                                 (exists s g g', u = Some(s, g) /\ v = Some(s, g') /\ P ctx g g')) xs ys -> 
-                                                 P ctx (gtth_send p q xs) (gtt_send p q ys).
-  
-  Fixpoint typ_gtth_ind_ref ctx G G' (a : typ_gtth ctx G G') {struct a} : P ctx G G'.
-  Proof.
-    refine (match a with 
-      | gt_hol n ctx gc Ha => P_hol n ctx gc Ha
-      | gt_send ctx p q xs ys Ha Hl => P_send ctx p q xs ys Ha _
-    end); try easy.
-    revert Hl. apply Forall2_mono.
-    intros. 
-    destruct H.
-    - left. easy.
-    - destruct H. destruct H. destruct H. destruct H. destruct H0. subst.
-      right. exists x0. exists x1. exists x2. split. easy. split. easy. 
-      apply typ_gtth_ind_ref; try easy.
-  Qed.
-
-End typ_gtth_ind_ref.
-
+ 
 Fixpoint isoList (R: ltt -> ltt -> Prop) (l1 l2: list (option(sort*ltt))): Prop :=
   match (l1,l2) with
     | (Datatypes.None::xs, Datatypes.None::ys)               => isoList R xs ys
@@ -133,6 +70,7 @@ Definition balancedG (G : gtt) := forall w w' p q gn,
   (exists k, forall w', (gttmap G (w ++ w') None (gnode_end) \/ (List.length w' = k /\ exists tc, gttmap G (w ++ w') None tc)) -> 
                         exists w2 w0, w' = w2 ++ w0 /\ exists r, 
                         gttmap G (w ++ w2) None (gnode_pq p r) \/ gttmap G (w ++ w2) None (gnode_pq r p)).
+
 
 Definition wfgC G := exists G', gttTC G' G /\ wfG G' /\ (forall n, exists m, guardG n m G') /\ balancedG G. 
 
@@ -316,4 +254,184 @@ Proof.
 Qed.
 
 
+Lemma balanced_cont : forall [lsg p q],
+    balancedG (gtt_send p q lsg) -> List.Forall (fun u => u = None \/ (exists s g, u = Some(s, g) /\ balancedG g)) lsg.
+Proof.
+  intros. 
+  apply Forall_forall; intros.
+  destruct x.
+  - right. destruct p0. exists s. exists g. split. easy.
+    specialize(in_some_implies_onth (s, g) lsg H0); intros.
+    destruct H1 as (n, H1). clear H0.
+    unfold balancedG. 
+    intros.
+    unfold balancedG in H.
+    specialize(H (n :: w) w' p0 q0 gn).
+    assert(gttmap (gtt_send p q lsg) (n :: w) None gn).
+    {
+      apply gmap_con with (st := s) (gk := g); try easy.
+    }
+    assert(gttmap (gtt_send p q lsg) ((n :: w) ++ w') None (gnode_pq p0 q0) \/
+    gttmap (gtt_send p q lsg) ((n :: w) ++ w') None (gnode_pq q0 p0)).
+    {
+      destruct H2. left.
+      apply gmap_con with (st := s) (gk := g); try easy.
+      right.
+      apply gmap_con with (st := s) (gk := g); try easy.
+    }
+    specialize(H H3 H4).
+    destruct H as (k, H). exists k.
+    intros. specialize(H w'0).
+    assert(gttmap (gtt_send p q lsg) ((n :: w) ++ w'0) None gnode_end \/
+    Datatypes.length w'0 = k /\ (exists tc : gnode, gttmap (gtt_send p q lsg) ((n :: w) ++ w'0) None tc)).
+    {
+      destruct H5. left.
+      apply gmap_con with (st := s) (gk := g); try easy.
+      right.
+      destruct H5. split. easy.
+      destruct H6. exists x.
+      apply gmap_con with (st := s) (gk := g); try easy.
+    }
+    specialize(H H6).
+    destruct H as (w2,(w0,(H,Ha))).
+    destruct Ha as (r,Ha).
+    exists w2. exists w0. split. easy. exists r. 
+    {
+      destruct Ha. left.
+      inversion H7; try easy. subst. 
+      specialize(eq_trans (esym H1) H15); intros. inversion H. subst. easy.
+      right.
+      inversion H7; try easy. subst.
+      specialize(eq_trans (esym H1) H15); intros. inversion H. subst. easy.
+    }
+    left. easy.
+Qed.
+
+
+Lemma wfgC_after_step_all : forall [ys s s'],
+    s <> s' -> wfgC (gtt_send s s' ys) -> List.Forall (fun u => u = None \/ (exists st g, u = Some(st, g) /\ wfgC g)) ys.
+Proof.
+  intros. apply Forall_forall; intros.
+  destruct x. 
+  - specialize(in_some_implies_onth p ys H1); intros.
+    destruct H2. rename x into l. clear H1. 
+    right. destruct p. exists s0. exists g. split. easy.
+    unfold wfgC in *.
+    destruct H0 as (Gl,(Ha,(Hb,(Hc,Hd)))).
+    pinversion Ha; try easy.
+    - subst.
+      specialize(Forall2_prop_l l xs ys (s0, g) (fun (u : option (sort * global)) (v : option (sort * gtt)) =>
+        u = None /\ v = None \/
+        (exists (s : sort) (g : global) (g' : gtt),
+           u = Some (s, g) /\ v = Some (s, g') /\ upaco2 gttT bot2 g g')) H2 H3); intros.
+      destruct H0 as (p',(He,Hf)). 
+      destruct p'. destruct Hf; try easy.
+      destruct H0 as (s1,(g1,(g2,(Hf,(Hg,Hh))))). inversion Hf. inversion Hg. subst.
+      exists g1. pclearbot.
+      - split. easy.
+      - inversion Hb. subst.
+        specialize(Forall_prop l xs (s1, g1) (fun u : option (sort * global) =>
+        u = None \/ (exists (s : sort) (g : global), u = Some (s, g) /\ wfG g)) He H7); intros.
+        simpl in H0. destruct H0; try easy. destruct H0 as (s2,(g3,(Hi,Hj))).
+        inversion Hi. subst.
+        split. easy.
+      - specialize(guard_cont Hc); intros.
+        specialize(Forall_prop l xs (s2, g3) (fun u : option (sort * global) =>
+        u = None \/
+        (exists (s : sort) (g : global),
+           u = Some (s, g) /\ (forall n : fin, exists m : fin, guardG n m g))) He H0); intros.
+        simpl in H1. destruct H1; try easy. destruct H1 as (s3,(g4,(Hk,Hl))).
+        inversion Hk. subst. split. easy.
+      - specialize(balanced_cont Hd); intros.
+        specialize(Forall_prop l ys (s3, g2) (fun u : option (sort * gtt) =>
+        u = None \/ (exists (s : sort) (g : gtt), u = Some (s, g) /\ balancedG g)) H2 H1); intros.
+        simpl in H4. destruct H4; try easy. destruct H4 as (s4,(g5,(Hm,Hn))).
+        inversion Hm. subst. easy.
+      - destruct Hf; try easy. destruct H0 as (s1,(g1,(g2,Hf))). easy.
+    - subst.
+      clear H0 H1. clear Q.
+      specialize(guard_breakG G Hc); intros.
+      destruct H0 as (T,(Hte,(Htf,Htg))).
+      specialize(gttTC_after_subst (g_rec G) T (gtt_send s s' ys)); intros.
+      assert(gttTC T (gtt_send s s' ys)). apply H0; try easy. pfold. easy.
+      destruct Htg. subst. pinversion H1; try easy. apply gttT_mon.
+      destruct H3 as (p1,(q1,(lis,Htg))). subst. 
+      pinversion H1; try easy. subst. clear H0.
+      specialize(wfG_after_beta (g_rec G) (g_send s s' lis) Hb Hte); intros.
+      clear Hc Hb Ha Hte.
+      specialize(Forall2_prop_l l lis ys (s0, g) (fun (u : option (sort * global)) (v : option (sort * gtt)) =>
+        u = None /\ v = None \/
+        (exists (s : sort) (g : global) (g' : gtt),
+           u = Some (s, g) /\ v = Some (s, g') /\ upaco2 gttT bot2 g g')) H2 H4); intros.
+      destruct H3 as (p',(He,Hf)). 
+      destruct p'. destruct Hf; try easy.
+      destruct H3 as (s1,(g1,(g2,(Hf,(Hg,Hh))))). inversion Hf. inversion Hg. subst.
+      exists g1. pclearbot.
+      - split. easy.
+      - inversion H0. subst.
+        specialize(Forall_prop l lis (s1, g1) (fun u : option (sort * global) =>
+        u = None \/ (exists (s : sort) (g : global), u = Some (s, g) /\ wfG g)) He H9); intros.
+        simpl in H3. destruct H3; try easy. destruct H3 as (s2,(g3,(Hi,Hj))).
+        inversion Hi. subst.
+        split. easy.
+      - specialize(guard_cont Htf); intros.
+        specialize(Forall_prop l lis (s2, g3) (fun u : option (sort * global) =>
+        u = None \/
+        (exists (s : sort) (g : global),
+           u = Some (s, g) /\ (forall n : fin, exists m : fin, guardG n m g))) He H3); intros.
+        simpl in H5. destruct H5; try easy. destruct H5 as (s3,(g4,(Hk,Hl))).
+        inversion Hk. subst. split. easy.
+      - specialize(balanced_cont Hd); intros.
+        specialize(Forall_prop l ys (s3, g2) (fun u : option (sort * gtt) =>
+        u = None \/ (exists (s : sort) (g : gtt), u = Some (s, g) /\ balancedG g)) H2 H5); intros.
+        simpl in H6. destruct H6; try easy. destruct H6 as (s4,(g5,(Hm,Hn))).
+        inversion Hm. subst. easy.
+      - destruct Hf; try easy. destruct H3 as (s1,(g1,(g2,Hf))). easy.
+    apply gttT_mon. apply gttT_mon.
+  - left. easy.
+Qed.
+
+Lemma wfgC_triv : forall s s0 l, wfgC (gtt_send s s0 l) -> s <> s0 /\ SList l.
+Proof.
+  intros.
+  unfold wfgC in H.
+  destruct H as (Gl,(Ha,(Hb,(Hc,Hd)))).
+  specialize(guard_breakG_s2 (gtt_send s s0 l) Gl Hc Hb Ha); intros.
+  clear Ha Hb Hc Hd. clear Gl.
+  destruct H as (Gl,(Ha,(Hb,(Hc,Hd)))).
+  destruct Ha.
+  - subst. pinversion Hd; try easy. apply gttT_mon.
+  - destruct H as (p1,(q1,(lis,Ha))). subst.
+    pinversion Hd; try easy. subst. clear Hd Hb.
+    inversion Hc. subst. split. easy.
+    clear H4 H5 Hc.
+    revert H3 H0. revert lis. clear s s0.
+    induction l; intros; try easy.
+    - destruct lis; try easy.
+    - destruct lis; try easy.
+      inversion H0. subst. clear H0.
+      specialize(SList_f o lis H3); intros. clear H3.
+      destruct H.
+      - apply SList_b. specialize(IHl lis). apply IHl; try easy.
+      - destruct H as (H,(a1,H1)). subst.
+        destruct H4; try easy. destruct H as (s1,(g1,(g2,(Ha,(Hb,Hc))))). inversion Ha. subst.
+        destruct l; try easy.
+    apply gttT_mon.
+Qed.
+
+Lemma guard_contG : forall n st st' x1 s3 g,
+        (forall n : fin, exists m : fin, guardG n m (g_send st st' x1)) -> 
+        onth n x1 = Some (s3, g) -> 
+        (forall n0 : fin, exists m : fin, guardG n0 m g).
+Proof.
+  intros. specialize(H (S n0)). destruct H. inversion H. subst. clear H.
+  revert H4 H0. revert n0 x g s3 x1 st st'.
+  induction n; intros; try easy.
+  - destruct x1; try easy. simpl in H0. subst. exists x.
+    inversion H4. subst.
+    destruct H1; try easy. destruct H as (s1,(g1,(Hta,Htb))). inversion Hta. subst. easy.
+  - destruct x1; try easy.
+    inversion H4. subst. clear H4.
+    specialize(IHn n0 x g s3 x1). apply IHn; try easy. 
+Qed.
 

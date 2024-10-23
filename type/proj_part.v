@@ -1,4 +1,4 @@
-From SST Require Export type.global type.local type.isomorphism type.projection type.merge.
+From SST Require Export type.global type.local type.isomorphism type.projection type.merge type.step.
 Require Import List String Datatypes ZArith Relations PeanoNat. 
 Open Scope list_scope.
 From Paco Require Import paco pacotac.

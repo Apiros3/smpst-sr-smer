@@ -5,9 +5,9 @@ Import ListNotations.
 Notation fin := nat.
 
 Inductive Forall3S {A} : (A -> A -> A -> Prop) -> list A -> list A -> list A -> Prop := 
-  | Forall3_nil0 : forall P xs, Forall3S P nil xs xs
-  | Forall3_nil1 : forall P xs, Forall3S P xs nil xs
-  | Forall3_cons : forall P a xa b xb c xc, P a b c -> Forall3S P xa xb xc -> Forall3S P (a :: xa) (b :: xb) (c :: xc).
+  | Forall3s_nil0 : forall P xs, Forall3S P nil xs xs
+  | Forall3s_nil1 : forall P xs, Forall3S P xs nil xs
+  | Forall3s_cons : forall P a xa b xb c xc, P a b c -> Forall3S P xa xb xc -> Forall3S P (a :: xa) (b :: xb) (c :: xc).
 
 Fixpoint SList {A} (lis : list (option A)) : Prop := 
   match lis with 
@@ -172,3 +172,57 @@ Proof.
   apply IHm; try easy.
 Qed.
 
+Inductive Forall3 {A B C} : (A -> B -> C -> Prop) -> list A -> list B -> list C -> Prop := 
+  | Forall3_nil : forall P, Forall3 P nil nil nil
+  | Forall3_cons : forall P a b c xa xb xc, P a b c -> Forall3 P xa xb xc -> Forall3 P (a :: xa) (b :: xb) (c :: xc).
+
+Fixpoint noneLis {A} (n : fin) : list (option A) := 
+  match n with 
+    | 0 => nil 
+    | S m => None :: noneLis m
+  end.
+
+
+Lemma Forall2_prop_r {A B} : forall l (xs : list (option A)) (ys : list (option B)) p P,
+      onth l xs = Some p ->
+      Forall2 P xs ys ->
+      exists p', onth l ys = p' /\ P (Some p) p'.
+Proof.
+  induction l; intros.
+  - destruct xs; try easy.
+    destruct ys; try easy.
+    inversion H0. subst. clear H0. 
+    simpl in H. subst. exists o0. easy.
+  - destruct xs; try easy.
+    destruct ys; try easy.
+    inversion H0. subst. clear H0. 
+    specialize(IHl xs ys p P). apply IHl; try easy.
+Qed.
+
+Lemma Forall2_prop_l {A B} : forall l (xs : list (option A)) (ys : list (option B)) p P,
+      onth l ys = Some p ->
+      Forall2 P xs ys ->
+      exists p', onth l xs = p' /\ P p' (Some p).
+Proof.
+  induction l; intros.
+  - destruct xs; try easy.
+    destruct ys; try easy.
+    inversion H0. subst. clear H0. 
+    simpl in H. subst. exists o. easy.
+  - destruct xs; try easy.
+    destruct ys; try easy.
+    inversion H0. subst. clear H0. 
+    specialize(IHl xs l' p P). apply IHl; try easy.
+Qed.
+
+Lemma Forall_prop {A} : forall l (xs : list (option A)) p P, 
+      onth l xs = Some p ->
+      Forall P xs -> 
+      P (Some p).
+Proof.
+  intros.
+  specialize(Forall_forall P xs); intros.
+  destruct H1. specialize(H1 H0). 
+  clear H2. specialize(some_onth_implies_In l xs p H); intros.
+  specialize(H1 (Some p) H2); intros. easy.
+Qed.

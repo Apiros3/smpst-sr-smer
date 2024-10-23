@@ -1,6 +1,6 @@
 From mathcomp Require Import ssreflect.seq all_ssreflect.
 From Paco Require Import paco pacotac.
-From SST Require Export src.expressions src.header type.global type.local type.isomorphism type.merge.
+From SST Require Export src.expressions src.header type.global type.local type.isomorphism.
 Require Import List String Coq.Arith.PeanoNat Relations Coq.Logic.Decidable.
 Import ListNotations. 
 
@@ -12,11 +12,6 @@ Inductive isgParts : part -> global -> Prop :=
   
 Definition isgPartsC (pt : part) (G : gtt) : Prop := 
     exists G', gttTC G' G /\ (forall n, exists m, guardG n m G') /\ isgParts pt G'.
-
-Inductive ishParts : part -> gtth -> Prop := 
-  | ha_sendp : forall p q l, ishParts p (gtth_send p q l)
-  | ha_sendq : forall p q l, ishParts q (gtth_send p q l)
-  | ha_sendr : forall p q r n s g lis, p <> r -> q <> r -> onth n lis = Some (s, g) -> ishParts r g -> ishParts r (gtth_send p q lis).
 
 
 Lemma triv_pt_p : forall p q x0,
@@ -80,21 +75,6 @@ Proof.
     apply gttT_mon.
 Qed.
 
-
-Lemma ishParts_x : forall [p s1 s2 o1 o2 xs0],
-    (ishParts p (gtth_send s1 s2 (Some (o1,o2) :: xs0)) -> False) ->
-    (ishParts p o2 -> False).
-Proof.
-  intros. apply H. 
-  - case_eq (eqb p s1); intros.
-    assert (p = s1). apply eqb_eq; try easy. subst. apply ha_sendp.
-  - case_eq (eqb p s2); intros.
-    assert (p = s2). apply eqb_eq; try easy. subst. apply ha_sendq.
-  - assert (p <> s1). apply eqb_neq; try easy. 
-    assert (p <> s2). apply eqb_neq; try easy.
-    apply ha_sendr with (n := 0) (s := o1) (g := o2); try easy.
-Qed.
-
 Lemma isgParts_xs : forall [s s' x o p],
     isgParts p (g_send s s' x) ->
     isgParts p (g_send s s' (o :: x)).
@@ -105,33 +85,6 @@ Proof.
   subst. apply pa_sendr with (n := Nat.succ n) (s := s0) (g := g); try easy.
 Qed.
 
-Lemma ishParts_hxs : forall [p s1 s2 o1 xs0],
-    (ishParts p (gtth_send s1 s2 (o1 :: xs0)) -> False) ->
-    (ishParts p (gtth_send s1 s2 xs0) -> False).
-Proof.
-  intros. apply H.
-  inversion H0. subst. apply ha_sendp. apply ha_sendq.
-  subst. apply ha_sendr with (n := Nat.succ n) (s := s) (g := g); try easy.
-Qed.
-
-Lemma ishParts_n : forall [n p s s' xs s0 g],
-    (ishParts p (gtth_send s s' xs) -> False) ->
-    onth n xs = Some(s0, g) -> 
-    (ishParts p g -> False).
-Proof.  
-  induction n; intros; try easy.
-  - apply H. destruct xs; try easy. simpl in *. subst.
-    - case_eq (eqb p s); intros.
-      assert (p = s). apply eqb_eq; try easy. subst. apply ha_sendp.
-    - case_eq (eqb p s'); intros.
-      assert (p = s'). apply eqb_eq; try easy. subst. apply ha_sendq.
-    - assert (p <> s). apply eqb_neq; try easy. 
-      assert (p <> s'). apply eqb_neq; try easy.
-      apply ha_sendr with (n := 0) (s := s0) (g := g); try easy.
-  - destruct xs; try easy.
-    specialize(ishParts_hxs H); intros.
-    specialize(IHn p s s' xs s0 g). apply IHn; try easy.
-Qed.
 
 Lemma isgParts_x : forall [s s' x s0 g p],
     isgParts p g -> 
@@ -693,7 +646,6 @@ Proof.
 Qed.
   
 
-
 Lemma part_cont : forall ys r p q,
     isgPartsC r (gtt_send p q ys) -> 
     r <> p -> r <> q ->
@@ -824,12 +776,54 @@ Proof.
     apply gttT_mon.
 Qed.
   
-  
-  
-  
-  
-  
-
+Lemma parts_to_word : forall p G, isgPartsC p G -> exists w r, (gttmap G w None (gnode_pq r p) \/ gttmap G w None (gnode_pq p r)).
+Proof.
+  intros.
+  unfold isgPartsC in H.
+  destruct H as (Gl,(Ha,(Hb,Hc))).
+  specialize(isgParts_depth_exists p Gl Hc); intros.
+  destruct H as (n, H).
+  clear Hc Hb.
+  revert H Ha. revert Gl G p.
+  induction n; intros; try easy.
+  - inversion H. subst.
+    exists nil. exists q. right. pinversion Ha. subst. constructor.
+    apply gttT_mon.
+  - subst.
+    exists nil. exists p0. left. pinversion Ha. subst. constructor.
+    apply gttT_mon.
+  - inversion H. subst.
+    pinversion Ha. subst.
+    specialize(subst_parts_depth 0 0 n p g g Q H2 H1); intros.
+    specialize(IHn Q G p). apply IHn; try easy.
+    apply gttT_mon.
+  - subst.
+    pinversion Ha. subst.
+    assert(exists gl, onth k ys = Some(s, gl) /\ gttTC g gl).
+    {
+      clear H4 H2 H1 H Ha IHn.
+      revert H8 H3. revert lis ys s g.
+      induction k; intros; try easy.
+      - destruct lis; try easy.
+        destruct ys; try easy.
+        inversion H8. subst. clear H8.
+        simpl in H3. subst. 
+        destruct H2; try easy. destruct H as (s1,(g1,(g2,(Ha,(Hb,Hc))))). inversion Ha. subst.
+        exists g2. destruct Hc; try easy.
+      - destruct lis; try easy.
+        destruct ys; try easy.
+        inversion H8. subst. clear H8.
+        specialize(IHk lis ys s g). apply IHk; try easy.
+    }
+    destruct H0 as (gl,(Hb,Hc)).
+    specialize(IHn g gl p H4 Hc).
+    destruct IHn as (w,(r,Hd)).
+    exists (k :: w). exists r.
+    destruct Hd.
+    - left. apply gmap_con with (st := s) (gk := gl); try easy.
+    - right. apply gmap_con with (st := s) (gk := gl); try easy.
+    apply gttT_mon.
+Qed.
 
 
 
