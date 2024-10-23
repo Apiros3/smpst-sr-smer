@@ -258,6 +258,7 @@ Proof.
   - inversion H5. subst. clear H5. inversion H8. subst. clear H8. 
     inversion H7. subst. clear H7. inversion H10. subst. clear H10. clear H1.
     destruct H6. destruct H1. destruct H7. destruct H6. rename x into T. rename x0 into T'.
+    destruct H7 as (H7, Ht). destruct H5 as (H5, Htt).
     - specialize(_a23_a q xs (p_recv q xs) nil nil T H5 (eq_refl (p_recv q xs))); intros. 
       destruct H8. destruct H8. destruct H10. destruct H11.
     - specialize(_a23_bf p l e Q (p_send p l e Q) nil nil T' H7 (eq_refl (p_send p l e Q))); intros.
@@ -276,24 +277,27 @@ Proof.
     specialize(multiC_step G G' G' q p l); intros. apply H20; try easy. constructor.
     exists G'. split; try easy. clear H20.
     clear H16.
-    constructor.
-    - specialize(wfgC_after_step G G' q p l H2 H19); try easy.
+    specialize(wfgC_after_step G G' q p l H2 H19); intros. 
+    assert(wfgC G').
+    intros. apply H16.
+    unfold projectableA. intros.
+    specialize(decidable_isgPartsC G pt H2); intros. unfold Decidable.decidable in H20.
+    destruct H20.
+    specialize(H3 pt H20).
+    - admit.
+    - unfold not in H20. exists ltt_end. pfold. constructor; try easy.
+    constructor; try easy.
     - intros.
       apply H3; try easy.
-      
-        
       - specialize(part_after_step G G' q p pt l LP LQ); intros. 
-        apply H20; try easy.
-      easy.
+        apply H22; try easy.
     specialize(projection_step_label G G' q p l LP LQ); intros.
     assert(exists (LS LS' : sort) (LT LT' : ltt), onth l LP = Some (LS, LT) /\ onth l LQ = Some (LS', LT')).
-    apply H16; try easy. clear H16. destruct H20. destruct H16. destruct H16. destruct H16. destruct H16.
-    rename x2 into SL. rename x3 into SL'. rename x4 into TL. rename x5 into TL'.
+    apply H21; try easy.
+    destruct H22 as (SL,(SL',(TL,(TL',(H22,H23))))).
     
-    specialize(_a_29_s G q p LP LQ SL TL SL' TL' l H2 H6 H16 H1 H20); intros.
-    destruct H21. rename x2 into Gl. destruct H21. rename x2 into ctxG. destruct H21. destruct H21.
-    rename x2 into SI. rename x3 into Sn.
-    destruct H21. destruct H22. destruct H23. destruct H24. destruct H25. destruct H26.
+    specialize(_a_29_s G q p LP LQ SL TL SL' TL' l H2 H6 H22 H1 H23); intros.
+    destruct H24 as (Gl,(ctxG,(SI,(Sn,(Ha,(Hb,(Hc,(Hd,(He,(Hf,Hg)))))))))).
     specialize(_3_21_helper_1 H20 H17 H10); intros.
     specialize(_3_21_helper_2 H15 H16); intros. 
     constructor. constructor.

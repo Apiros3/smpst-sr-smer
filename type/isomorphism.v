@@ -127,14 +127,12 @@ Proof.
   split; try easy. right. apply CIH; try easy.
 Qed.
 
+
 Definition balancedG (G : gtt) := forall w w' p q gn,
-  gttmap G w None gn -> gttmap G (w ++ w') None (gnode_pq p q) -> 
-  (exists k, forall w', gttmap G (w ++ w') None (gnode_end) \/ 
-                        (List.length w' = k /\ exists w2 w0, w' = w2 ++ w0 /\ exists r, 
-                        gttmap G (w ++ w2) None (gnode_pq p r) \/ gttmap G (w ++ w2) None (gnode_pq r p))) /\
-  (exists k, forall w', gttmap G (w ++ w') None (gnode_end) \/
-                        (List.length w' = k /\ exists w2 w0, w' = w2 ++ w0 /\ exists r,
-                        gttmap G (w ++ w2) None (gnode_pq q r) \/ gttmap G (w ++ w2) None (gnode_pq r q))).
+  gttmap G w None gn -> (gttmap G (w ++ w') None (gnode_pq p q) \/ gttmap G (w ++ w') None (gnode_pq q p)) -> 
+  (exists k, forall w', (gttmap G (w ++ w') None (gnode_end) \/ (List.length w' = k /\ exists tc, gttmap G (w ++ w') None tc)) -> 
+                        exists w2 w0, w' = w2 ++ w0 /\ exists r, 
+                        gttmap G (w ++ w2) None (gnode_pq p r) \/ gttmap G (w ++ w2) None (gnode_pq r p)).
 
 Definition wfgC G := exists G', gttTC G' G /\ wfG G' /\ (forall n, exists m, guardG n m G') /\ balancedG G. 
 

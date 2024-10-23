@@ -43,6 +43,14 @@ Definition Forall2_mono {X Y} {R T : X -> Y -> Prop} (HRT : forall x y, R x y ->
     | Forall2_cons _ _ _ _ h1 h2 => Forall2_cons _ _ (HRT _ _ h1) (loop _ _ h2)
     end.
 
+Definition Forall_mono {X} {R T : X -> Prop} (HRT : forall x, R x -> T x) :
+      forall l, Forall R l -> Forall T l.
+Proof.
+  induction l; intros; try easy.
+  inversion H. subst. specialize(IHl H3). constructor; try easy.
+  apply HRT; try easy.
+Qed.
+
 Inductive Forall2R {X Y} (P : X -> Y -> Prop) : list X -> list Y -> Prop := 
   | Forall2R_nil : forall ys, Forall2R P nil ys
   | Forall2R_cons : forall x xs y ys, P x y -> Forall2R P xs ys -> Forall2R P (x :: xs) (y :: ys).

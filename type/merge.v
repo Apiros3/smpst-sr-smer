@@ -352,6 +352,20 @@ Proof.
     easy.
 Qed.
  
- 
+Lemma merge_inv_ss : forall n T ys1 t1,
+        isMerge T ys1 -> 
+        onth n ys1 = Some t1 -> 
+        t1 = T.
+Proof.
+  induction n; intros.
+  - destruct ys1; try easy. simpl in H0. subst.
+    inversion H; try easy.
+  - destruct ys1; try easy.
+    specialize(IHn T ys1 t1).
+    inversion H; try easy.
+    - subst. destruct n; try easy.
+    - subst. apply IHn; try easy.
+    - subst. apply IHn; try easy.
+Qed.
  
  

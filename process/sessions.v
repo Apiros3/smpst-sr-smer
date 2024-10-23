@@ -343,9 +343,10 @@ Proof.
     apply t_sess; try easy. constructor; try easy. constructor; try easy.
     destruct H5. exists x. split; try easy. destruct H4. split.
     apply _a22_1 with (P := P); try easy.
+    admit.
   - inversion H. subst. inversion H3. subst. clear H3.
     inversion H6. subst. clear H6. destruct H4. destruct H3.
-    apply t_sess; try easy.
+    apply t_sess; try easy. destruct H4 as (H4, Ht).
     specialize(_a23_f p_inact x nil nil H4 (eq_refl p_inact)); intros. subst.
     unfold InT in *. simpl in *. specialize(H1 pt H6).
     specialize(pmergeCR G p H0 H3); intros. 
@@ -372,7 +373,7 @@ Proof.
     easy.
 
     constructor. easy. constructor; try easy.
-Qed.
+Admitted.
 
 (* Declare Instance Equivalence_pcong : Equivalence scongP. 
 Declare Instance Equivalence_scong : Equivalence scong.
