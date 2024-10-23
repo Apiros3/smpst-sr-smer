@@ -214,6 +214,131 @@ Proof.
         subst. destruct H4. left. easy. subst. right. easy.
 Qed.
 
+
+Fixpoint noneLis {A} (n : fin) : list (option A) := 
+  match n with 
+    | 0 => nil 
+    | S m => None :: noneLis m
+  end.
+
+Lemma typh_with_more : forall gl ctxJ ctxG g3,
+            typ_gtth ctxJ gl g3 -> 
+            Forall2R (fun u v : option gtt => u = None \/ u = v) ctxJ ctxG -> 
+            typ_gtth ctxG gl g3.
+Proof.
+  induction gl using gtth_ind_ref; intros.
+  - inversion H. subst. constructor.
+    clear H. revert H3 H0. revert ctxG ctxJ. induction n; intros.
+    - destruct ctxJ; try easy. destruct ctxG; try easy.
+      inversion H0. subst. clear H0.
+      simpl in H3. subst. destruct H4; try easy. 
+    - destruct ctxJ; try easy. destruct ctxG; try easy.
+      inversion H0. subst. clear H0.
+      specialize(IHn ctxG ctxJ). apply IHn; try easy.
+  - inversion H0. subst. constructor; try easy.
+    clear H7 H0. revert H8 H1 H.
+    revert xs ctxJ ctxG. clear p q.
+    induction ys; intros.
+    - destruct xs; try easy.
+    - destruct xs; try easy. inversion H. subst. clear H. inversion H8. subst. clear H8.
+      specialize(IHys xs ctxJ ctxG H7 H1 H4). constructor; try easy. clear H7 H4 IHys.
+      destruct H5. left. easy.
+      destruct H as (s1,(g1,(g2,(Ha,(Hb,Hc))))). subst.
+      destruct H3; try easy. destruct H as (s2,(g3,(Hd,He))). inversion Hd. subst.
+      right. exists s2. exists g3. exists g2. split. easy. split. easy.
+      specialize(He ctxJ ctxG g2). apply He; try easy.
+Qed.
+
+Lemma typ_gtth_pad_l : forall Gl' g1 ctxJ ctxG,
+    typ_gtth (noneLis (Datatypes.length ctxJ) ++ ctxG) Gl' g1 -> 
+    typ_gtth (ctxJ ++ ctxG)%list Gl' g1.
+Proof.
+  intros.
+  specialize(typh_with_more Gl' (noneLis (Datatypes.length ctxJ) ++ ctxG) (ctxJ ++ ctxG) g1); intros. apply H0; try easy.
+  clear H0 H. induction ctxJ; intros; try easy.
+  - simpl. induction ctxG; intros; try easy. constructor. constructor; try easy. right. easy.
+  - constructor; try easy. left. easy.
+Qed.
+
+Lemma typ_gtth_pad_r : forall g2 g3 ctxJ ctxG,
+        typ_gtth ctxJ g2 g3 -> 
+        typ_gtth (ctxJ ++ ctxG)%list g2 g3.
+Proof.
+  intros.
+  specialize(typh_with_more g2 ctxJ (ctxJ ++ ctxG) g3); intros.
+  apply H0; try easy.
+  clear H0 H. induction ctxJ; intros; try easy. constructor.
+  constructor; try easy. right. easy.
+Qed.
+
+Lemma typh_with_less : forall ctxGi' ctxG g4 g3,
+            typ_gtth ctxG g4 g3 -> 
+            Forall2R (fun u v : option gtt => u = None \/ u = v) ctxGi' ctxG -> 
+            usedCtx ctxGi' g4 -> 
+            typ_gtth ctxGi' g4 g3.
+Proof.
+  intros. revert H H0 H1. revert g3 ctxGi' ctxG.
+  induction g4 using gtth_ind_ref; intros.
+  - inversion H. subst. constructor; try easy. 
+    inversion H1. subst.
+    clear H1 H. revert H4 H0. revert g3 ctxG G. induction n; intros; try easy.
+    - destruct ctxG; try easy. simpl in H4. subst.
+      inversion H0. subst. simpl. destruct H3; try easy.
+    - destruct ctxG; try easy. inversion H0. subst. 
+      apply IHn with (ctxG := ctxG); try easy.
+  - inversion H0. subst.
+    constructor; try easy. 
+    inversion H2. subst.
+    specialize(mergeCtx_to_2R ctxGLis ctxGi' H6); intros. clear H6 H8 H2 H0.
+    revert H3 H10 H9 H1 H. revert ctxGi' ctxG ys ctxGLis. clear p q.
+    induction xs; intros; try easy.
+    - destruct ys; try easy.
+    - destruct ys; try easy. destruct ctxGLis; try easy.
+      inversion H. subst. clear H. inversion H9. subst. clear H9.
+      inversion H3. subst. clear H3. inversion H10. subst. clear H10.
+      specialize(IHxs ctxGi' ctxG ys ctxGLis).
+      assert(Forall2
+         (fun (u : option (sort * gtth)) (v : option (sort * gtt)) =>
+          u = None /\ v = None \/
+          (exists (s : sort) (g : gtth) (g' : gtt),
+             u = Some (s, g) /\ v = Some (s, g') /\ typ_gtth ctxGi' g g')) xs ys).
+      apply IHxs; try easy. constructor; try easy.
+      clear H H12 H7 H8 H5 IHxs.
+      destruct H6. left. easy.
+      destruct H as (s1,(g1,(g2,(Ha,(Hb,Hc))))). subst.
+      destruct H4; try easy. destruct H as (s2,(g3,(Hd,He))). inversion Hd. subst.
+      destruct H9; try easy. destruct H as (ct,(s3,(g4,(Hf,(Hg,Hh))))). inversion Hg. subst.
+      destruct H2; try easy. destruct H as (ct2,(Hi,Hj)). inversion Hi. subst.
+      right. exists s3. exists g4. exists g2.
+      split. easy. split. easy.
+      specialize(He g2 ct2 ctxG).
+      assert(typ_gtth ct2 g4 g2).
+      {
+        apply He; try easy.
+        clear Hh Hi Hc Hd He Hg. 
+        revert Hj H1. revert ctxGi' ctxG.
+        induction ct2; intros; try easy.
+        - constructor.
+        - destruct ctxGi'; try easy. destruct ctxG; try easy.
+          inversion Hj. subst. clear Hj. inversion H1. subst. clear H1.
+          specialize(IHct2 ctxGi' ctxG H5 H7). constructor; try easy.
+          destruct H3. left. easy. subst. destruct H4. left. easy. subst. right. easy.
+      }
+      apply typh_with_more with (ctxJ := ct2); try easy.
+Qed.
+
+Lemma typh_with_more2 {A} : forall ctxGi' ctxG (ctxJ : list A) gl g3,
+            typ_gtth (noneLis (Datatypes.length ctxJ) ++ ctxGi') gl g3 -> 
+            Forall2R (fun u v : option gtt => u = None \/ u = v) ctxGi' ctxG -> 
+            typ_gtth (noneLis (Datatypes.length ctxJ) ++ ctxG) gl g3.
+Proof.
+  intros.
+  apply typh_with_more with (ctxJ := (noneLis (Datatypes.length ctxJ) ++ ctxGi')); try easy.
+  clear H.
+  induction ctxJ; intros; try easy.
+  constructor; try easy. left. easy.
+Qed.
+
 Lemma ctx_back : forall s s' xs ys0 ctxG,
       typ_gtth ctxG (gtth_send s s' xs) (gtt_send s s' ys0) -> 
       usedCtx ctxG (gtth_send s s' xs) -> 
@@ -226,9 +351,24 @@ Proof.
   inversion H0. subst. clear H0.
   clear H4. clear s s'.
   specialize(mergeCtx_to_2R ctxGLis ctxG H3); intros. 
-  (* Forall2R *)
-  
-Admitted.
+  exists ctxGLis. split; try easy. clear H3.
+  revert H7 H6 H. revert ys0 ctxG ctxGLis.
+  induction xs; intros.
+  - destruct ys0; try easy. destruct ctxGLis; try easy. constructor.
+  - destruct ys0; try easy. destruct ctxGLis; try easy.
+    inversion H7. subst. clear H7. inversion H6. subst. clear H6.
+    inversion H. subst. clear H.
+    specialize(IHxs ys0 ctxG ctxGLis H5 H8 H6). constructor; try easy.
+    clear H6 H8 H5 IHxs.
+    - destruct H4. destruct H. subst. destruct H3. destruct H. subst. left. easy.
+      destruct H as (s1,(g1,(g2,Ha))). easy.
+    - destruct H as (ct,(s1,(g1,(Ha,(Hb,Hc))))). subst.
+      destruct H3; try easy. destruct H as (s2,(g2,(g3,(Hd,(He,Hf))))). inversion Hd. subst.
+      destruct H2; try easy. destruct H as (ct2,(Hg,Hh)). inversion Hg. subst.
+      right. exists ct2. exists s2. exists g2. exists g3.
+      split. easy. split. easy. split. easy. split; try easy.
+      apply typh_with_less with (ctxG := ctxG); try easy.
+Qed.
 
 Lemma mergeCtx_sl : forall n ctxGLis ctxGi ctxG,
         onth n ctxGLis = Some ctxGi -> 
@@ -623,129 +763,6 @@ Proof.
 Qed.
 
 
-Fixpoint noneLis {A} (n : fin) : list (option A) := 
-  match n with 
-    | 0 => nil 
-    | S m => None :: noneLis m
-  end.
-
-Lemma typh_with_more : forall gl ctxJ ctxG g3,
-            typ_gtth ctxJ gl g3 -> 
-            Forall2R (fun u v : option gtt => u = None \/ u = v) ctxJ ctxG -> 
-            typ_gtth ctxG gl g3.
-Proof.
-  induction gl using gtth_ind_ref; intros.
-  - inversion H. subst. constructor.
-    clear H. revert H3 H0. revert ctxG ctxJ. induction n; intros.
-    - destruct ctxJ; try easy. destruct ctxG; try easy.
-      inversion H0. subst. clear H0.
-      simpl in H3. subst. destruct H4; try easy. 
-    - destruct ctxJ; try easy. destruct ctxG; try easy.
-      inversion H0. subst. clear H0.
-      specialize(IHn ctxG ctxJ). apply IHn; try easy.
-  - inversion H0. subst. constructor; try easy.
-    clear H7 H0. revert H8 H1 H.
-    revert xs ctxJ ctxG. clear p q.
-    induction ys; intros.
-    - destruct xs; try easy.
-    - destruct xs; try easy. inversion H. subst. clear H. inversion H8. subst. clear H8.
-      specialize(IHys xs ctxJ ctxG H7 H1 H4). constructor; try easy. clear H7 H4 IHys.
-      destruct H5. left. easy.
-      destruct H as (s1,(g1,(g2,(Ha,(Hb,Hc))))). subst.
-      destruct H3; try easy. destruct H as (s2,(g3,(Hd,He))). inversion Hd. subst.
-      right. exists s2. exists g3. exists g2. split. easy. split. easy.
-      specialize(He ctxJ ctxG g2). apply He; try easy.
-Qed.
-
-Lemma typ_gtth_pad_l : forall Gl' g1 ctxJ ctxG,
-    typ_gtth (noneLis (Datatypes.length ctxJ) ++ ctxG) Gl' g1 -> 
-    typ_gtth (ctxJ ++ ctxG)%list Gl' g1.
-Proof.
-  intros.
-  specialize(typh_with_more Gl' (noneLis (Datatypes.length ctxJ) ++ ctxG) (ctxJ ++ ctxG) g1); intros. apply H0; try easy.
-  clear H0 H. induction ctxJ; intros; try easy.
-  - simpl. induction ctxG; intros; try easy. constructor. constructor; try easy. right. easy.
-  - constructor; try easy. left. easy.
-Qed.
-
-Lemma typ_gtth_pad_r : forall g2 g3 ctxJ ctxG,
-        typ_gtth ctxJ g2 g3 -> 
-        typ_gtth (ctxJ ++ ctxG)%list g2 g3.
-Proof.
-  intros.
-  specialize(typh_with_more g2 ctxJ (ctxJ ++ ctxG) g3); intros.
-  apply H0; try easy.
-  clear H0 H. induction ctxJ; intros; try easy. constructor.
-  constructor; try easy. right. easy.
-Qed.
-
-Lemma typh_with_less : forall ctxGi' ctxG g4 g3,
-            typ_gtth ctxG g4 g3 -> 
-            Forall2R (fun u v : option gtt => u = None \/ u = v) ctxGi' ctxG -> 
-            usedCtx ctxGi' g4 -> 
-            typ_gtth ctxGi' g4 g3.
-Proof.
-  intros. revert H H0 H1. revert g3 ctxGi' ctxG.
-  induction g4 using gtth_ind_ref; intros.
-  - inversion H. subst. constructor; try easy. 
-    inversion H1. subst.
-    clear H1 H. revert H4 H0. revert g3 ctxG G. induction n; intros; try easy.
-    - destruct ctxG; try easy. simpl in H4. subst.
-      inversion H0. subst. simpl. destruct H3; try easy.
-    - destruct ctxG; try easy. inversion H0. subst. 
-      apply IHn with (ctxG := ctxG); try easy.
-  - inversion H0. subst.
-    constructor; try easy. 
-    inversion H2. subst.
-    specialize(mergeCtx_to_2R ctxGLis ctxGi' H6); intros. clear H6 H8 H2 H0.
-    revert H3 H10 H9 H1 H. revert ctxGi' ctxG ys ctxGLis. clear p q.
-    induction xs; intros; try easy.
-    - destruct ys; try easy.
-    - destruct ys; try easy. destruct ctxGLis; try easy.
-      inversion H. subst. clear H. inversion H9. subst. clear H9.
-      inversion H3. subst. clear H3. inversion H10. subst. clear H10.
-      specialize(IHxs ctxGi' ctxG ys ctxGLis).
-      assert(Forall2
-         (fun (u : option (sort * gtth)) (v : option (sort * gtt)) =>
-          u = None /\ v = None \/
-          (exists (s : sort) (g : gtth) (g' : gtt),
-             u = Some (s, g) /\ v = Some (s, g') /\ typ_gtth ctxGi' g g')) xs ys).
-      apply IHxs; try easy. constructor; try easy.
-      clear H H12 H7 H8 H5 IHxs.
-      destruct H6. left. easy.
-      destruct H as (s1,(g1,(g2,(Ha,(Hb,Hc))))). subst.
-      destruct H4; try easy. destruct H as (s2,(g3,(Hd,He))). inversion Hd. subst.
-      destruct H9; try easy. destruct H as (ct,(s3,(g4,(Hf,(Hg,Hh))))). inversion Hg. subst.
-      destruct H2; try easy. destruct H as (ct2,(Hi,Hj)). inversion Hi. subst.
-      right. exists s3. exists g4. exists g2.
-      split. easy. split. easy.
-      specialize(He g2 ct2 ctxG).
-      assert(typ_gtth ct2 g4 g2).
-      {
-        apply He; try easy.
-        clear Hh Hi Hc Hd He Hg. 
-        revert Hj H1. revert ctxGi' ctxG.
-        induction ct2; intros; try easy.
-        - constructor.
-        - destruct ctxGi'; try easy. destruct ctxG; try easy.
-          inversion Hj. subst. clear Hj. inversion H1. subst. clear H1.
-          specialize(IHct2 ctxGi' ctxG H5 H7). constructor; try easy.
-          destruct H3. left. easy. subst. destruct H4. left. easy. subst. right. easy.
-      }
-      apply typh_with_more with (ctxJ := ct2); try easy.
-Qed.
-
-Lemma typh_with_more2 {A} : forall ctxGi' ctxG (ctxJ : list A) gl g3,
-            typ_gtth (noneLis (Datatypes.length ctxJ) ++ ctxGi') gl g3 -> 
-            Forall2R (fun u v : option gtt => u = None \/ u = v) ctxGi' ctxG -> 
-            typ_gtth (noneLis (Datatypes.length ctxJ) ++ ctxG) gl g3.
-Proof.
-  intros.
-  apply typh_with_more with (ctxJ := (noneLis (Datatypes.length ctxJ) ++ ctxGi')); try easy.
-  clear H.
-  induction ctxJ; intros; try easy.
-  constructor; try easy. left. easy.
-Qed.
 
 Lemma shift_to : forall (g1 : gtt) (p : string) (Gl : gtth) (ctxG ctxJ : seq.seq (option gtt)),
 typ_gtth ctxG Gl g1 ->
