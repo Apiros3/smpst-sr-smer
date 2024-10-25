@@ -455,6 +455,56 @@ Proof.
     exists r. easy.
 Qed.
 
+Lemma word_to_parts : forall G w' p q0,
+             gttmap G w' None (gnode_pq p q0) \/
+             gttmap G w' None (gnode_pq q0 p) -> 
+             wfgCw G -> 
+             isgPartsC p G.
+Proof.
+  intros G w'. revert G.
+  induction w'; intros.
+  - destruct H.
+    inversion H. subst. apply triv_pt_p_s; try easy.
+    inversion H. subst. apply triv_pt_q_s; try easy.
+  - destruct H.
+    - inversion H. subst.
+      specialize(wfgCw_after_step_all); intros.
+      specialize(wfgCw_triv p0 q xs H0); intros. destruct H2.
+      specialize(H1 xs p0 q H2 H0); intros.
+      clear H2 H3.
+      specialize(Forall_prop a xs (st, gk) (fun u : option (sort * gtt) =>
+        u = None \/ (exists (st : sort) (g : gtt), u = Some (st, g) /\ wfgCw g)) H4 H1); intros.
+      destruct H2; try easy. destruct H2 as (s1,(g1,(Ha,Hb))). inversion Ha. subst.
+      specialize(IHw' g1 p q0).
+      assert(isgPartsC p g1). apply IHw'; try easy.
+      left. easy.
+      - case_eq (eqb p p0); intros.
+        assert (p = p0). apply eqb_eq; try easy. subst. apply triv_pt_p_s; try easy.
+      - case_eq (eqb p q); intros.
+        assert (p = q). apply eqb_eq; try easy. subst. apply triv_pt_q_s; try easy.
+      - assert (p <> p0). apply eqb_neq; try easy.
+        assert (p <> q). apply eqb_neq; try easy.
+        apply part_cont_b_s with (n := a) (s := s1) (g := g1); try easy.
+    - inversion H. subst.
+      specialize(wfgCw_after_step_all); intros.
+      specialize(wfgCw_triv p0 q xs H0); intros. destruct H2.
+      specialize(H1 xs p0 q H2 H0); intros.
+      clear H2 H3.
+      specialize(Forall_prop a xs (st, gk) (fun u : option (sort * gtt) =>
+        u = None \/ (exists (st : sort) (g : gtt), u = Some (st, g) /\ wfgCw g)) H4 H1); intros.
+      destruct H2; try easy. destruct H2 as (s1,(g1,(Ha,Hb))). inversion Ha. subst.
+      specialize(IHw' g1 p q0).
+      assert(isgPartsC p g1). apply IHw'; try easy.
+      right. easy.
+      - case_eq (eqb p p0); intros.
+        assert (p = p0). apply eqb_eq; try easy. subst. apply triv_pt_p_s; try easy.
+      - case_eq (eqb p q); intros.
+        assert (p = q). apply eqb_eq; try easy. subst. apply triv_pt_q_s; try easy.
+      - assert (p <> p0). apply eqb_neq; try easy.
+        assert (p <> q). apply eqb_neq; try easy.
+        apply part_cont_b_s with (n := a) (s := s1) (g := g1); try easy.
+Qed.
+
 Lemma balanced_step : forall [G G' p q l],
     wfgC G -> 
     gttstepC G G' p q l -> 
@@ -552,13 +602,382 @@ Proof.
             destruct H0 as (T,(T1,(Ha,Hb))). clear Hb. clear T1.
             
             specialize(wfgCw_after_step G (gtt_send s s' ys0) p q l Ht H4); intros. 
-            clear H4 H12 H11 H10 H9 H6 H5 Ht H1.
-            admit. 
+            
+            assert(isgPartsC p (gtt_send s s' ys0)).
+            {
+              apply word_to_parts with (w' := w') (q0 := q0); try easy.
+            }
+            assert(Forall (fun u => u = None \/ (exists s g, u = Some (s, g) /\ isgPartsC p g)) ys0).
+            {
+              apply Forall_forall; intros.
+              destruct x.
+              - right. destruct p0. exists s0. exists g. split. easy.
+                pinversion Ha; try easy. subst.
+                specialize(in_some_implies_onth (s0, g) ys0 H8); intros.
+                destruct H13 as (n, H13).
+                specialize(Forall2_prop_r n ys0 ys1 (s0, g) (fun (u : option (sort * gtt)) (v : option ltt) =>
+         u = None /\ v = None \/
+         (exists (s : sort) (g : gtt) (t : ltt),
+            u = Some (s, g) /\ v = Some t /\ upaco3 projection bot3 g p t)) H13 H22); intros.
+                destruct H14 as (p1,(Hta,Htb)). destruct Htb; try easy.
+                destruct H14 as (s1,(g1,(t1,(Htb,(Htc,Htd))))). inversion Htb. subst.
+                destruct Htd; try easy.
+                pinversion H14; try easy. subst.
+                specialize(merge_end_back n ys1 T Htc H23); intros. subst.
+                specialize(pmergeCR_s (gtt_send s s' ys0) p); intros.
+                assert False. apply H20; try easy.
+                pfold. easy. easy.
+                apply proj_mon. apply proj_mon.
+              - left. easy.
+            }
+            unfold balancedG in H2.
+            assert((Forall (fun u : option (sort * gtt) =>
+              u = None \/
+              (exists (s : sort) (g : gtt),
+                 u = Some (s, g) /\
+                  exists k : fin,
+                    forall w'0 : list fin,
+                    gttmap g w'0 None gnode_end \/
+                    length w'0 = k /\ (exists tc : gnode, gttmap g w'0 None tc) ->
+                    exists w2 w0 : list fin,
+                      w'0 = w2 ++ w0 /\
+                      (exists r : string,
+                         gttmap g w2 None (gnode_pq p r) \/
+                         gttmap g w2 None (gnode_pq r p))))) ys0).
+            {
+              apply Forall_forall; intros.
+              specialize(Forall_forall  (fun u : option (sort * gtt) =>
+        u = None \/
+        (exists (s : sort) (g : gtt),
+           u = Some (s, g) /\
+           (forall (w w' : list fin) (p q : string) (gn : gnode),
+            gttmap g w None gn ->
+            gttmap g (seq.cat w w') None (gnode_pq p q) \/ gttmap g (seq.cat w w') None (gnode_pq q p) ->
+            exists k : fin,
+              forall w'0 : list fin,
+              gttmap g (seq.cat w w'0) None gnode_end \/
+              length w'0 = k /\ (exists tc : gnode, gttmap g (seq.cat w w'0) None tc) ->
+              exists w2 w0 : list fin,
+                w'0 = w2 ++ w0 /\
+                (exists r : string,
+                   gttmap g (seq.cat w w2) None (gnode_pq p r) \/
+                   gttmap g (seq.cat w w2) None (gnode_pq r p))))) ys0); intros.
+              destruct H14. specialize(H14 H2). clear H15 H2.
+              specialize(H14 x H13).
+              specialize(Forall_forall (fun u : option (sort * gtt) =>
+        u = None \/ (exists (s : sort) (g : gtt), u = Some (s, g) /\ isgPartsC p g)) ys0); intros.
+              destruct H2. specialize(H2 H8). clear H8 H15.
+              specialize(H2 x H13).
+              destruct H2. left. easy.
+              destruct H2 as (s1,(g1,(Hb,Hc))). subst.
+              destruct H14; try easy.
+              destruct H2 as (s2,(g2,(Hd,He))). inversion Hd. subst.
+              clear H13 Hd.
+              right. exists s2. exists g2. split. easy.
+              specialize(parts_to_word p g2 Hc); intros.
+              destruct H2 as (w1,(r,Hd)).
+              specialize(He nil w1 p r).
+              specialize(nil_word g2); intros. destruct H2 as (tc,H2).
+              specialize(He tc). apply He; try easy. simpl.
+              destruct Hd. right. easy. left. easy.
+            }
+            clear H8 H7 Ha H4 H2.
+            assert(exists K, 
+                Forall
+        (fun u : option (sort * gtt) =>
+         u = None \/
+         (exists (s : sort) (g : gtt),
+            u = Some (s, g) /\
+            (exists k : fin, k <= K /\
+               forall w'0 : list fin,
+               gttmap g w'0 None gnode_end \/
+               length w'0 = k /\ (exists tc : gnode, gttmap g w'0 None tc) ->
+               exists w2 w0 : list fin,
+                 w'0 = w2 ++ w0 /\
+                 (exists r : string, gttmap g w2 None (gnode_pq p r) \/ gttmap g w2 None (gnode_pq r p)))))
+        ys0).
+            {
+              clear H0 H3 H H12 H11 H10 H9 H6 H5 H1 Ht.
+              revert H13. revert p. clear s s' xs q l ct Gl ys G w' q0 gn T.
+              induction ys0; intros; try easy.
+              exists 0. constructor.
+              inversion H13. subst. clear H13. specialize(IHys0 p H2).
+              destruct IHys0 as (K, Ha). clear H2.
+              destruct H1.
+              - subst. exists K. constructor; try easy. left. easy.
+              - destruct H as (s1,(g1,(Hb,(k,Hc)))). subst.
+                exists (Nat.max k K).
+                constructor; try easy.
+                - right. exists s1. exists g1. split. easy.
+                  exists k. split; try easy.
+                  apply Nat.le_max_l.
+                - revert Ha. clear Hc. clear g1 s1.
+                  apply Forall_mono; intros.
+                  destruct H. left. easy.
+                  destruct H as (s1,(g1,(Ha,(k1,(Hb,Hc))))).
+                  right. subst. exists s1. exists g1.
+                  split. easy. exists k1. split; try easy.
+                  apply Nat.le_trans with (m := K); try easy.
+                  apply Nat.le_max_r.
+            }
+            destruct H2 as (K, H2). clear H13.
+            assert(Forall
+             (fun u : option (sort * gtt) =>
+              u = None \/
+              (exists (s : sort) (g : gtt),
+                 u = Some (s, g) /\
+                    (forall w'0 : list fin,
+                     gttmap g w'0 None gnode_end \/
+                     length w'0 = K /\ (exists tc : gnode, gttmap g w'0 None tc) ->
+                     exists w2 w0 : list fin,
+                       w'0 = w2 ++ w0 /\
+                       (exists r : string, gttmap g w2 None (gnode_pq p r) \/ gttmap g w2 None (gnode_pq r p))))) ys0).
+            {
+              revert H2. apply Forall_mono; intros.
+              destruct H2. left. easy.
+              destruct H2 as (s1,(g1,(Ha,(k,(Hb,Hc))))).
+              subst. right. exists s1. exists g1. split. easy.
+              apply cut_further with (k := k); try easy.
+            }
+            clear H2.
+            exists (S K).
+            intros. clear H H3. clear gn w' ct Gl. clear ys xs H1 Ht.
+            destruct H2.
+            - inversion H. subst.
+              specialize(Forall_prop n ys0 (st, gk) (fun u : option (sort * gtt) =>
+        u = None \/
+        (exists (s : sort) (g : gtt),
+           u = Some (s, g) /\
+           (forall w'0 : list fin,
+            gttmap g w'0 None gnode_end \/ length w'0 = K /\ (exists tc : gnode, gttmap g w'0 None tc) ->
+            exists w2 w0 : list fin,
+              w'0 = w2 ++ w0 /\
+              (exists r : string, gttmap g w2 None (gnode_pq p r) \/ gttmap g w2 None (gnode_pq r p))))) H14 H4); intros.
+               destruct H1; try easy. destruct H1 as (s1,(g1,(Ha,Hb))). inversion Ha. subst.
+               specialize(Hb lis).
+               assert(gttmap g1 lis None gnode_end \/ length lis = K /\ (exists tc : gnode, gttmap g1 lis None tc)). left. easy.
+               specialize(Hb H1). clear H1.
+               destruct Hb as (w2,(w0,(Hc,(r,Hd)))). subst.
+               exists (n :: w2). exists w0. split. constructor.
+               exists r.
+               destruct Hd.
+               - left. apply gmap_con with (st := s1) (gk := g1); try easy.
+               - right. apply gmap_con with (st := s1) (gk := g1); try easy.
+            - destruct H as (H,(tc,Ha)).
+              inversion Ha; try easy. subst. easy.
+              subst.
+              specialize(Forall_prop n ys0 (st, gk) (fun u : option (sort * gtt) =>
+        u = None \/
+        (exists (s : sort) (g : gtt),
+           u = Some (s, g) /\
+           (forall w'0 : list fin,
+            gttmap g w'0 None gnode_end \/ length w'0 = K /\ (exists tc : gnode, gttmap g w'0 None tc) ->
+            exists w2 w0 : list fin,
+              w'0 = w2 ++ w0 /\
+              (exists r : string, gttmap g w2 None (gnode_pq p r) \/ gttmap g w2 None (gnode_pq r p))))) H14 H4); intros.
+              destruct H1; try easy. destruct H1 as (s1,(g1,(Hb,Hc))). inversion Hb. subst.
+              specialize(Hc lis).
+              assert(gttmap g1 lis None gnode_end \/ length lis = K /\ (exists tc : gnode, gttmap g1 lis None tc)). right. split. apply eq_add_S. easy. exists tc. easy.
+              specialize(Hc H1). clear H1.
+              destruct Hc as (w2,(w0,(Hc,(r,Hd)))). subst.
+              exists (n :: w2). exists w0. split. constructor. exists r.
+              destruct Hd.
+               - left. apply gmap_con with (st := s1) (gk := g1); try easy.
+               - right. apply gmap_con with (st := s1) (gk := g1); try easy.
           }
         - case_eq (eqb p0 q); intros.
           assert (p0 = q). apply eqb_eq; try easy. subst. 
           {
-            admit.
+            simpl in *. 
+            clear H4 Hc Hb Ha. 
+            clear H8 H7 H13 H14.
+            assert(gttstepC G (gtt_send s s' ys0) p q l). pfold. easy. clear H0.
+            specialize(proj_cont_pq_step_full G (gtt_send s s' ys0) p q l Ht H4 H1); intros.
+            destruct H0 as (T1,(T,(Hb,Ha))). clear Hb. clear T1.
+            
+            specialize(wfgCw_after_step G (gtt_send s s' ys0) p q l Ht H4); intros. 
+            
+            assert(isgPartsC q (gtt_send s s' ys0)).
+            {
+              apply word_to_parts with (w' := w') (q0 := q0); try easy.
+            }
+            assert(Forall (fun u => u = None \/ (exists s g, u = Some (s, g) /\ isgPartsC q g)) ys0).
+            {
+              apply Forall_forall; intros.
+              destruct x.
+              - right. destruct p0. exists s0. exists g. split. easy.
+                pinversion Ha; try easy. subst.
+                specialize(in_some_implies_onth (s0, g) ys0 H8); intros.
+                destruct H13 as (n, H13).
+                specialize(Forall2_prop_r n ys0 ys1 (s0, g) (fun (u : option (sort * gtt)) (v : option ltt) =>
+         u = None /\ v = None \/
+         (exists (s : sort) (g : gtt) (t : ltt),
+            u = Some (s, g) /\ v = Some t /\ upaco3 projection bot3 g q t)) H13 H22); intros.
+                destruct H14 as (p1,(Hta,Htb)). destruct Htb; try easy.
+                destruct H14 as (s1,(g1,(t1,(Htb,(Htc,Htd))))). inversion Htb. subst.
+                destruct Htd; try easy.
+                pinversion H14; try easy. subst.
+                specialize(merge_end_back n ys1 T Htc H23); intros. subst.
+                specialize(pmergeCR_s (gtt_send s s' ys0) q); intros.
+                assert False. apply H20; try easy.
+                pfold. easy. easy.
+                apply proj_mon. apply proj_mon.
+              - left. easy.
+            }
+            unfold balancedG in H2.
+            assert((Forall (fun u : option (sort * gtt) =>
+              u = None \/
+              (exists (s : sort) (g : gtt),
+                 u = Some (s, g) /\
+                  exists k : fin,
+                    forall w'0 : list fin,
+                    gttmap g w'0 None gnode_end \/
+                    length w'0 = k /\ (exists tc : gnode, gttmap g w'0 None tc) ->
+                    exists w2 w0 : list fin,
+                      w'0 = w2 ++ w0 /\
+                      (exists r : string,
+                         gttmap g w2 None (gnode_pq q r) \/
+                         gttmap g w2 None (gnode_pq r q))))) ys0).
+            {
+              apply Forall_forall; intros.
+              specialize(Forall_forall  (fun u : option (sort * gtt) =>
+        u = None \/
+        (exists (s : sort) (g : gtt),
+           u = Some (s, g) /\
+           (forall (w w' : list fin) (p q : string) (gn : gnode),
+            gttmap g w None gn ->
+            gttmap g (seq.cat w w') None (gnode_pq p q) \/ gttmap g (seq.cat w w') None (gnode_pq q p) ->
+            exists k : fin,
+              forall w'0 : list fin,
+              gttmap g (seq.cat w w'0) None gnode_end \/
+              length w'0 = k /\ (exists tc : gnode, gttmap g (seq.cat w w'0) None tc) ->
+              exists w2 w0 : list fin,
+                w'0 = w2 ++ w0 /\
+                (exists r : string,
+                   gttmap g (seq.cat w w2) None (gnode_pq p r) \/
+                   gttmap g (seq.cat w w2) None (gnode_pq r p))))) ys0); intros.
+              destruct H14. specialize(H14 H2). clear H15 H2.
+              specialize(H14 x H13).
+              specialize(Forall_forall (fun u : option (sort * gtt) =>
+        u = None \/ (exists (s : sort) (g : gtt), u = Some (s, g) /\ isgPartsC q g)) ys0); intros.
+              destruct H2. specialize(H2 H8). clear H8 H15.
+              specialize(H2 x H13).
+              destruct H2. left. easy.
+              destruct H2 as (s1,(g1,(Hb,Hc))). subst.
+              destruct H14; try easy.
+              destruct H2 as (s2,(g2,(Hd,He))). inversion Hd. subst.
+              clear H13 Hd.
+              right. exists s2. exists g2. split. easy.
+              specialize(parts_to_word q g2 Hc); intros.
+              destruct H2 as (w1,(r,Hd)).
+              specialize(He nil w1 q r).
+              specialize(nil_word g2); intros. destruct H2 as (tc,H2).
+              specialize(He tc). apply He; try easy. simpl.
+              destruct Hd. right. easy. left. easy.
+            }
+            clear H8 H7 Ha H4 H2.
+            assert(exists K, 
+                Forall
+        (fun u : option (sort * gtt) =>
+         u = None \/
+         (exists (s : sort) (g : gtt),
+            u = Some (s, g) /\
+            (exists k : fin, k <= K /\
+               forall w'0 : list fin,
+               gttmap g w'0 None gnode_end \/
+               length w'0 = k /\ (exists tc : gnode, gttmap g w'0 None tc) ->
+               exists w2 w0 : list fin,
+                 w'0 = w2 ++ w0 /\
+                 (exists r : string, gttmap g w2 None (gnode_pq q r) \/ gttmap g w2 None (gnode_pq r q)))))
+        ys0).
+            {
+              clear H0 H3 H H12 H11 H10 H9 H6 H5 H1 Ht.
+              revert H13. revert q. clear s s' xs p l ct Gl ys G w' q0 gn T.
+              induction ys0; intros; try easy.
+              exists 0. constructor.
+              inversion H13. subst. clear H13. specialize(IHys0 q H2).
+              destruct IHys0 as (K, Ha). clear H2.
+              destruct H1.
+              - subst. exists K. constructor; try easy. left. easy.
+              - destruct H as (s1,(g1,(Hb,(k,Hc)))). subst.
+                exists (Nat.max k K).
+                constructor; try easy.
+                - right. exists s1. exists g1. split. easy.
+                  exists k. split; try easy.
+                  apply Nat.le_max_l.
+                - revert Ha. clear Hc. clear g1 s1.
+                  apply Forall_mono; intros.
+                  destruct H. left. easy.
+                  destruct H as (s1,(g1,(Ha,(k1,(Hb,Hc))))).
+                  right. subst. exists s1. exists g1.
+                  split. easy. exists k1. split; try easy.
+                  apply Nat.le_trans with (m := K); try easy.
+                  apply Nat.le_max_r.
+            }
+            destruct H2 as (K, H2). clear H13.
+            assert(Forall
+             (fun u : option (sort * gtt) =>
+              u = None \/
+              (exists (s : sort) (g : gtt),
+                 u = Some (s, g) /\
+                    (forall w'0 : list fin,
+                     gttmap g w'0 None gnode_end \/
+                     length w'0 = K /\ (exists tc : gnode, gttmap g w'0 None tc) ->
+                     exists w2 w0 : list fin,
+                       w'0 = w2 ++ w0 /\
+                       (exists r : string, gttmap g w2 None (gnode_pq q r) \/ gttmap g w2 None (gnode_pq r q))))) ys0).
+            {
+              revert H2. apply Forall_mono; intros.
+              destruct H2. left. easy.
+              destruct H2 as (s1,(g1,(Ha,(k,(Hb,Hc))))).
+              subst. right. exists s1. exists g1. split. easy.
+              apply cut_further with (k := k); try easy.
+            }
+            clear H2.
+            exists (S K).
+            intros. clear H H3. clear gn w' ct Gl. clear ys xs H1 Ht.
+            destruct H2.
+            - inversion H. subst.
+              specialize(Forall_prop n ys0 (st, gk) (fun u : option (sort * gtt) =>
+        u = None \/
+        (exists (s : sort) (g : gtt),
+           u = Some (s, g) /\
+           (forall w'0 : list fin,
+            gttmap g w'0 None gnode_end \/ length w'0 = K /\ (exists tc : gnode, gttmap g w'0 None tc) ->
+            exists w2 w0 : list fin,
+              w'0 = w2 ++ w0 /\
+              (exists r : string, gttmap g w2 None (gnode_pq q r) \/ gttmap g w2 None (gnode_pq r q))))) H14 H4); intros.
+               destruct H1; try easy. destruct H1 as (s1,(g1,(Ha,Hb))). inversion Ha. subst.
+               specialize(Hb lis).
+               assert(gttmap g1 lis None gnode_end \/ length lis = K /\ (exists tc : gnode, gttmap g1 lis None tc)). left. easy.
+               specialize(Hb H1). clear H1.
+               destruct Hb as (w2,(w0,(Hc,(r,Hd)))). subst.
+               exists (n :: w2). exists w0. split. constructor.
+               exists r.
+               destruct Hd.
+               - left. apply gmap_con with (st := s1) (gk := g1); try easy.
+               - right. apply gmap_con with (st := s1) (gk := g1); try easy.
+            - destruct H as (H,(tc,Ha)).
+              inversion Ha; try easy. subst. easy.
+              subst.
+              specialize(Forall_prop n ys0 (st, gk) (fun u : option (sort * gtt) =>
+        u = None \/
+        (exists (s : sort) (g : gtt),
+           u = Some (s, g) /\
+           (forall w'0 : list fin,
+            gttmap g w'0 None gnode_end \/ length w'0 = K /\ (exists tc : gnode, gttmap g w'0 None tc) ->
+            exists w2 w0 : list fin,
+              w'0 = w2 ++ w0 /\
+              (exists r : string, gttmap g w2 None (gnode_pq q r) \/ gttmap g w2 None (gnode_pq r q))))) H14 H4); intros.
+              destruct H1; try easy. destruct H1 as (s1,(g1,(Hb,Hc))). inversion Hb. subst.
+              specialize(Hc lis).
+              assert(gttmap g1 lis None gnode_end \/ length lis = K /\ (exists tc : gnode, gttmap g1 lis None tc)). right. split. apply eq_add_S. easy. exists tc. easy.
+              specialize(Hc H1). clear H1.
+              destruct Hc as (w2,(w0,(Hc,(r,Hd)))). subst.
+              exists (n :: w2). exists w0. split. constructor. exists r.
+              destruct Hd.
+               - left. apply gmap_con with (st := s1) (gk := g1); try easy.
+               - right. apply gmap_con with (st := s1) (gk := g1); try easy.
           }
         - destruct H8 as (G',H8). replace (gtt_send s s' ys0) with G' in *. clear H4 H7 H8.
           assert (p0 <> p). apply eqb_neq; try easy. 
@@ -744,7 +1163,7 @@ Proof.
         right. apply gmap_con with (st := s1) (gk := g1); try easy.
       }
     apply step_mon.
-Admitted. 
+Qed.
 
 Theorem wfgC_after_step : forall G G' p q n, wfgC G -> gttstepC G G' p q n -> projectableA G -> wfgC G'. 
 Proof.

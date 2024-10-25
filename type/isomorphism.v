@@ -467,13 +467,13 @@ Proof.
   - left. easy.
 Qed.
 
-Lemma wfgC_triv : forall s s0 l, wfgC (gtt_send s s0 l) -> s <> s0 /\ SList l.
+Lemma wfgCw_triv : forall s s0 l, wfgCw (gtt_send s s0 l) -> s <> s0 /\ SList l.
 Proof.
   intros.
   unfold wfgC in H.
-  destruct H as (Gl,(Ha,(Hb,(Hc,Hd)))).
+  destruct H as (Gl,(Ha,(Hb,Hc))).
   specialize(guard_breakG_s2 (gtt_send s s0 l) Gl Hc Hb Ha); intros.
-  clear Ha Hb Hc Hd. clear Gl.
+  clear Ha Hb Hc. clear Gl.
   destruct H as (Gl,(Ha,(Hb,(Hc,Hd)))).
   destruct Ha.
   - subst. pinversion Hd; try easy. apply gttT_mon.
@@ -493,6 +493,15 @@ Proof.
         destruct H4; try easy. destruct H as (s1,(g1,(g2,(Ha,(Hb,Hc))))). inversion Ha. subst.
         destruct l; try easy.
     apply gttT_mon.
+Qed.
+
+Lemma wfgC_triv : forall s s0 l, wfgC (gtt_send s s0 l) -> s <> s0 /\ SList l.
+Proof.
+  intros.
+  unfold wfgC in H.
+  apply wfgCw_triv. unfold wfgCw.
+  destruct H as (Gl,(Ha,(Hb,(Hc,Hd)))).
+  exists Gl. easy.
 Qed.
 
 Lemma guard_contG : forall n st st' x1 s3 g,
