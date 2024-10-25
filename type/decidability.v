@@ -548,18 +548,18 @@ Proof.
     specialize(IHk lis s g ys xs). apply IHk; try easy.
 Qed.
 
-Lemma decidable_isgPartsC : forall G pt, wfgC G -> decidable (isgPartsC pt G).
+Lemma decidable_isgPartsC_s : forall G pt, wfgCw G -> decidable (isgPartsC pt G).
 Proof.
   intros. unfold decidable. pose proof H as Ht.
-  unfold wfgC in H.
-  destruct H as (G',(Ha,(Hb,(Hc,Hd)))). 
+  unfold wfgCw in H.
+  destruct H as (G',(Ha,(Hb,Hc))). 
   specialize(decidable_isgParts G' pt); intros. unfold decidable in H.
   destruct H. left. unfold isgPartsC. exists G'. easy.
   right. unfold not in *. intros. apply H.
   clear H Ht.
   unfold isgPartsC in H0. destruct H0 as (Gl,(He,(Hf,Hg))).
   specialize(isgParts_depth_exists pt Gl Hg); intros. destruct H as (n, H). clear Hg.
-  clear Hd Hb. revert Ha Hc He Hf H.
+  clear Hb. revert Ha Hc He Hf H.
   revert G pt G' Gl.
   induction n; intros.
   - inversion H. subst. pinversion He; try easy. subst.
@@ -644,7 +644,16 @@ Proof.
       apply gttT_mon. 
       apply gttT_mon.
 Qed.
-  
+
+Lemma decidable_isgPartsC : forall G pt, wfgC G -> decidable (isgPartsC pt G).
+Proof.
+  intros.
+  apply decidable_isgPartsC_s; try easy.
+  unfold wfgC in *. unfold wfgCw. 
+  destruct H. exists x. easy.
+Qed.
+
+
 
 Lemma part_cont : forall ys r p q,
     isgPartsC r (gtt_send p q ys) -> 

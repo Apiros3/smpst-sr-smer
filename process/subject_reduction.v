@@ -292,7 +292,8 @@ Lemma guardP_subst_expr : forall y v j k,
     (forall n : fin, exists m : fin, guardP n m y) -> 
     (forall n : fin, exists m : fin, guardP n m (subst_expr_proc y v j k)).
 Proof.
-  
+  induction y using process_ind_ref; intros; try easy.
+  - 
 Admitted.
 
 Theorem _3_21 : forall M M' G, typ_sess M G -> betaP M M' -> exists G', typ_sess M' G' /\ multiC G G'.

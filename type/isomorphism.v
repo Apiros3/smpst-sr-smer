@@ -74,6 +74,8 @@ Definition balancedG (G : gtt) := forall w w' p q gn,
 
 Definition wfgC G := exists G', gttTC G' G /\ wfG G' /\ (forall n, exists m, guardG n m G') /\ balancedG G. 
 
+Definition wfgCw G := exists G', gttTC G' G /\ wfG G' /\ (forall n, exists m, guardG n m G').
+
 Definition wfC T := exists T', lttTC T' T /\ wfL T' /\ (forall n, exists m, guardL n m T').
 
 
@@ -386,6 +388,80 @@ Proof.
         u = None \/ (exists (s : sort) (g : gtt), u = Some (s, g) /\ balancedG g)) H2 H5); intros.
         simpl in H6. destruct H6; try easy. destruct H6 as (s4,(g5,(Hm,Hn))).
         inversion Hm. subst. easy.
+      - destruct Hf; try easy. destruct H3 as (s1,(g1,(g2,Hf))). easy.
+    apply gttT_mon. apply gttT_mon.
+  - left. easy.
+Qed.
+
+
+Lemma wfgCw_after_step_all : forall [ys s s'],
+    s <> s' -> wfgCw (gtt_send s s' ys) -> List.Forall (fun u => u = None \/ (exists st g, u = Some(st, g) /\ wfgCw g)) ys.
+Proof.
+  intros. apply Forall_forall; intros.
+  destruct x. 
+  - specialize(in_some_implies_onth p ys H1); intros.
+    destruct H2. rename x into l. clear H1. 
+    right. destruct p. exists s0. exists g. split. easy.
+    unfold wfgC in *.
+    destruct H0 as (Gl,(Ha,(Hb,Hc))).
+    pinversion Ha; try easy.
+    - subst.
+      specialize(Forall2_prop_l l xs ys (s0, g) (fun (u : option (sort * global)) (v : option (sort * gtt)) =>
+        u = None /\ v = None \/
+        (exists (s : sort) (g : global) (g' : gtt),
+           u = Some (s, g) /\ v = Some (s, g') /\ upaco2 gttT bot2 g g')) H2 H3); intros.
+      destruct H0 as (p',(He,Hf)). 
+      destruct p'. destruct Hf; try easy.
+      destruct H0 as (s1,(g1,(g2,(Hf,(Hg,Hh))))). inversion Hf. inversion Hg. subst.
+      exists g1. pclearbot.
+      - split. easy.
+      - inversion Hb. subst.
+        specialize(Forall_prop l xs (s1, g1) (fun u : option (sort * global) =>
+        u = None \/ (exists (s : sort) (g : global), u = Some (s, g) /\ wfG g)) He H7); intros.
+        simpl in H0. destruct H0; try easy. destruct H0 as (s2,(g3,(Hi,Hj))).
+        inversion Hi. subst.
+        split. easy.
+      - specialize(guard_cont Hc); intros.
+        specialize(Forall_prop l xs (s2, g3) (fun u : option (sort * global) =>
+        u = None \/
+        (exists (s : sort) (g : global),
+           u = Some (s, g) /\ (forall n : fin, exists m : fin, guardG n m g))) He H0); intros.
+        simpl in H1. destruct H1; try easy. destruct H1 as (s3,(g4,(Hk,Hl))).
+        inversion Hk. subst. revert n. easy.
+      - destruct Hf; try easy. destruct H0 as (s1,(g1,(g2,Hf))). easy.
+    - subst.
+      clear H0 H1. clear Q.
+      specialize(guard_breakG G Hc); intros.
+      destruct H0 as (T,(Hte,(Htf,Htg))).
+      specialize(gttTC_after_subst (g_rec G) T (gtt_send s s' ys)); intros.
+      assert(gttTC T (gtt_send s s' ys)). apply H0; try easy. pfold. easy.
+      destruct Htg. subst. pinversion H1; try easy. apply gttT_mon.
+      destruct H3 as (p1,(q1,(lis,Htg))). subst. 
+      pinversion H1; try easy. subst. clear H0.
+      specialize(wfG_after_beta (g_rec G) (g_send s s' lis) Hb Hte); intros.
+      clear Hc Hb Ha Hte.
+      specialize(Forall2_prop_l l lis ys (s0, g) (fun (u : option (sort * global)) (v : option (sort * gtt)) =>
+        u = None /\ v = None \/
+        (exists (s : sort) (g : global) (g' : gtt),
+           u = Some (s, g) /\ v = Some (s, g') /\ upaco2 gttT bot2 g g')) H2 H4); intros.
+      destruct H3 as (p',(He,Hf)). 
+      destruct p'. destruct Hf; try easy.
+      destruct H3 as (s1,(g1,(g2,(Hf,(Hg,Hh))))). inversion Hf. inversion Hg. subst.
+      exists g1. pclearbot.
+      - split. easy.
+      - inversion H0. subst.
+        specialize(Forall_prop l lis (s1, g1) (fun u : option (sort * global) =>
+        u = None \/ (exists (s : sort) (g : global), u = Some (s, g) /\ wfG g)) He H9); intros.
+        simpl in H3. destruct H3; try easy. destruct H3 as (s2,(g3,(Hi,Hj))).
+        inversion Hi. subst.
+        split. easy.
+      - specialize(guard_cont Htf); intros.
+        specialize(Forall_prop l lis (s2, g3) (fun u : option (sort * global) =>
+        u = None \/
+        (exists (s : sort) (g : global),
+           u = Some (s, g) /\ (forall n : fin, exists m : fin, guardG n m g))) He H3); intros.
+        simpl in H5. destruct H5; try easy. destruct H5 as (s3,(g4,(Hk,Hl))).
+        inversion Hk. subst. revert n. easy.
       - destruct Hf; try easy. destruct H3 as (s1,(g1,(g2,Hf))). easy.
     apply gttT_mon. apply gttT_mon.
   - left. easy.

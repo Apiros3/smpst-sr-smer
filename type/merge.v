@@ -236,6 +236,40 @@ Proof. intro Mq.
   - specialize(IHMq LP' LP0' T k l q). apply IHMq; try easy.
 Qed.
 
+Lemma merge_send_T : forall n T ys q lp,
+        isMerge T ys -> 
+        onth n ys = Some (ltt_send q lp) -> 
+        exists lp', T = ltt_send q lp'.
+Proof.
+  induction n; intros; try easy.
+  destruct ys; try easy. simpl in H0. subst.
+  - inversion H. subst. exists lp. easy. 
+  - subst. exists lp. easy.
+  destruct ys; try easy. specialize(IHn T ys q lp).
+  inversion H.
+  - subst. destruct n; try easy.
+  - subst. apply IHn; try easy.
+  - subst. apply IHn; try easy.
+Qed.
+
+Lemma merge_recv_T : forall n T ys q lp,
+        isMerge T ys -> 
+        onth n ys = Some (ltt_recv q lp) -> 
+        exists lp', T = ltt_recv q lp'.
+Proof.
+  induction n; intros; try easy.
+  destruct ys; try easy. simpl in H0. subst.
+  - inversion H. subst. exists lp. easy. 
+  - subst. exists lp. easy.
+  destruct ys; try easy. specialize(IHn T ys q lp).
+  inversion H.
+  - subst. destruct n; try easy.
+  - subst. apply IHn; try easy.
+  - subst. apply IHn; try easy.
+Qed.
+  
+
+
 Lemma merge_label_sendb : forall ys0 LP LP' ST n l q,
       isMerge (ltt_send q LP) ys0 ->
       onth n ys0 = Some (ltt_send q LP') ->
