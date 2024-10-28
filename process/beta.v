@@ -38,16 +38,16 @@ Fixpoint subst_expr_proc (p : process) (e : expr) (n d : fin) : process :=
 
 Inductive betaP: relation session :=
   | r_comm  : forall p q xs y l e v Q M, 
-              onth l xs = Some y -> stepE_multi e v -> 
+              onth l xs = Some y -> stepE e (e_val v) -> 
               betaP ((p <-- (p_recv q xs)) ||| (q <-- (p_send p l e Q)) ||| M)
-                    ((p <-- subst_expr_proc y v 0 0) ||| (q <-- Q) ||| M)
+                    ((p <-- subst_expr_proc y (e_val v) 0 0) ||| (q <-- Q) ||| M)
   | rt_ite  : forall p e P Q M,
-              stepE_multi e (e_val (vbool true)) ->
+              stepE e (e_val (vbool true)) ->
               betaP ((p <-- (p_ite e P Q)) ||| M) ((p <-- P) ||| M)
   | rf_ite  : forall p e P Q M,
-              stepE_multi e (e_val (vbool false)) ->
+              stepE e (e_val (vbool false)) ->
               betaP ((p <-- (p_ite e P Q)) ||| M) ((p <-- Q) ||| M)
-  | r_struct: forall M1 M1' M2 M2', scong M1 M1' -> scong M2' M2 -> betaP M1' M2' -> betaP M1 M2.
+  | r_struct: forall M1 M1' M2 M2', unfoldP M1 M1' -> unfoldP M2' M2 -> betaP M1' M2' -> betaP M1 M2.
 
 Definition beta_multistep := multi betaP.
 

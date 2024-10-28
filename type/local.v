@@ -870,7 +870,7 @@ Proof.
       right. exists s. exists l. right. easy.
     - specialize(IHx0 Q H4). 
       destruct IHx0. destruct H. exists x1. split; try easy.
-      apply multi_step with (y := (l_rec Q)).
+      apply multi_sstep with (y := (l_rec Q)).
       constructor; try easy.
       easy.
   }

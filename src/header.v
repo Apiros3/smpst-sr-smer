@@ -4,6 +4,21 @@ Import ListNotations.
 
 Notation fin := nat.
 
+Inductive multi {X : Type} (R : relation X) : relation X :=
+  | multi_refl : forall (x : X), multi R x x 
+  | multi_step : forall (x y z : X), R x y -> multi R y z -> multi R x z.
+  
+Lemma transitive_multi {X : Type} : forall (R : relation X) (x y z : X), multi R x y -> multi R y z -> multi R x z.
+Proof.
+  intros R x y z H.
+  revert z.
+  induction H; intros. easy.
+  specialize(IHmulti z0 H1).
+  specialize(@multi_step X R); intros.
+  apply H2 with (y := y). easy. easy.
+Qed.
+
+
 Inductive Forall3S {A} : (A -> A -> A -> Prop) -> list A -> list A -> list A -> Prop := 
   | Forall3s_nil0 : forall P xs, Forall3S P nil xs xs
   | Forall3s_nil1 : forall P xs, Forall3S P xs nil xs
@@ -65,7 +80,7 @@ Definition Forall2R_mono {X Y} {R T : X -> Y -> Prop} (HRT : forall x y, R x y -
 
 Inductive multiS {X : Type} (R : relation X) : relation X :=
   | multi_sing : forall (x y : X), R x y -> multiS R x y
-  | multi_step : forall (x y z : X), R x y -> multiS R y z -> multiS R x z.
+  | multi_sstep : forall (x y z : X), R x y -> multiS R y z -> multiS R x z.
   
 Fixpoint onth {A : Type} (n : fin) (lis : list (option A)) : option A :=
   match n with 
