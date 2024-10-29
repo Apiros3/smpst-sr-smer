@@ -115,6 +115,23 @@ Proof.
   destruct H0. left. easy. right. apply IHl2; try easy.
 Qed.
 
+Lemma in_swap2 {A} : forall (l1 l2 l3 : list A) pt, In pt (l3 ++ l1 ++ l2) -> In pt (l3 ++ l2 ++ l1).
+Proof.
+  induction l3; intros. simpl in *.
+  - apply in_swap. easy.
+  - simpl in *. destruct H. left. easy.
+    specialize(IHl3 pt H). right. easy.
+Qed.
+
+Lemma nodup_swap2 {A} : forall (l1 l2 l3 : list A), NoDup (l3 ++ l1 ++ l2) -> NoDup (l3 ++ l2 ++ l1).
+Proof.
+  induction l3; intros.
+  - simpl in *. apply nodup_swap. easy.
+  - inversion H. subst. specialize(IHl3 H3). constructor; try easy.
+    unfold not in *.
+    intros. apply H2.
+    apply in_swap2. easy.
+Qed.
 
 Lemma _a22_2 : forall M M' G, typ_sess M G -> unfoldP M M' -> typ_sess M' G.
 Proof.
@@ -171,9 +188,34 @@ Proof.
     easy.
 
     constructor. easy. constructor; try easy.
-  - admit.
-  - admit.
-Admitted.
+  - inversion H. subst. inversion H3. subst. clear H3. inversion H6. subst. clear H6.
+    constructor; try easy.
+    - intros. specialize(H1 pt H3). unfold InT in *. simpl in *.
+      apply in_or_app. specialize(in_or ((flattenT M ++ flattenT M')) (flattenT M'') pt H1); intros.
+      destruct H4. left. apply in_swap. easy. right. easy.
+    - simpl in *.
+      apply nodup_swap. specialize(nodup_swap ((flattenT M ++ flattenT M')) (flattenT M'') H2); intros.
+      apply nodup_swap2. easy.
+    - constructor. constructor. easy. easy. easy.
+  - inversion H. subst. inversion H3. subst. clear H3. inversion H6. subst. clear H6.
+    inversion H5. subst. clear H5.
+    constructor; try easy.
+    - intros. specialize(H1 pt H3).
+      unfold InT in *. simpl in *.
+      apply in_or_app.
+      specialize(in_or (((flattenT M ++ flattenT M') ++ flattenT M'')) (flattenT M''') pt H1); intros.
+      destruct H4.
+      - left.
+        specialize(app_assoc (flattenT M) (flattenT M') (flattenT M'')); intros.
+        replace (flattenT M ++ flattenT M' ++ flattenT M'') with ((flattenT M ++ flattenT M') ++ flattenT M'') in *.
+        easy.
+      - right. easy.
+    - simpl in *.
+      specialize(app_assoc (flattenT M) (flattenT M') (flattenT M'')); intros.
+      replace (flattenT M ++ flattenT M' ++ flattenT M'') with ((flattenT M ++ flattenT M') ++ flattenT M'') in *.
+      easy.
+    - constructor. constructor. easy. constructor. easy. easy. easy.
+Qed.
 
 
 Inductive stepE : relation expr := 
