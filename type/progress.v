@@ -287,6 +287,8 @@ Proof.
     specialize(IHe1 Ha). destruct IHe1. left. constructor. easy. right. constructor. easy.
 Admitted.
 
+Lemma expr_eval_ss : forall ex S, typ_expr nil ex S -> exists v, stepE ex (e_val v).
+Admitted.
 
 Inductive betaPr : relation process := 
   | betaPr_sin : forall P Q, substitutionP 0 0 0 (p_rec P) P Q -> betaPr (p_rec P) Q.
@@ -447,9 +449,9 @@ Proof.
         - specialize(guardP_break Q Hg); intros.
           destruct H3 as (Q2,(Hj,Hl)).
           specialize(typ_proc_after_betaPr Q Q2 nil nil T1 Hj Hf); intros.
-          clear H7 H9 Hg Hc H H1 Hd H10.
+          clear H7 H9 Hg Hc H H1 Hd.
           pinversion He; try easy. subst. assert False. apply H. apply triv_pt_q; try easy. easy.
-          subst. clear H7 H10 H9 H5 He Hb Hf.
+          subst. clear H7 H9 H5 He Hb Hf.
           assert(exists M1, betaP (((p <-- Q1) ||| (q <-- Q2)) ||| M') M1).
           {
             clear Hh Hj.
@@ -467,7 +469,7 @@ Proof.
                 apply r_struct with (M1' := ((p <-- p_ite e p1 p2) ||| ((q <-- Q2) ||| M'))) (M2' := ((p <-- p2) ||| ((q <-- Q2) ||| M'))); try easy. constructor. constructor. constructor. easy.
             - destruct H.
               destruct H as (pt,(lb,(ex,(pr,Ha)))). subst.
-              specialize(_a23_bf pt lb ex pr (p_send pt lb ex pr) nil nil (ltt_send q ys) H2 (eq_refl ((p_send pt lb ex pr)))); intros. destruct H as (S,(T1,(Ht,Hb))). clear Hb H2. clear M P Q ys T1.
+              specialize(_a23_bf pt lb ex pr (p_send pt lb ex pr) nil nil (ltt_send q ys) H2 (eq_refl ((p_send pt lb ex pr)))); intros. destruct H as (S,(T1,(Ht,Hb))). clear H2. rename T1 into Tl. rename Hb into Hta. clear M P Q.
               destruct Hl.
               - subst. specialize(_a23_f p_inact (ltt_recv p ys0) nil nil H3 (eq_refl (p_inact))); intros. 
                 easy.
@@ -490,6 +492,7 @@ Proof.
                 specialize(_a23_bf pt1 lb1 ex1 pr1 (p_send pt1 lb1 ex1 pr1) nil nil (ltt_recv p ys0) H3 (eq_refl (p_send pt1 lb1 ex1 pr1))); intros.
                 destruct H as (S1,(T1,(Ha,(Hb,Hc)))). pinversion Hc. apply sub_mon.
               - destruct H as (pt2,(llp,Ha)). subst.
+                specialize(expr_eval_ss ex S Ht); intros. destruct H as (v, Ha).
                 admit.
             - destruct H as (pt,(llp,Ha)). subst.
               specialize(_a23_a pt llp (p_recv pt llp) nil nil (ltt_send q ys) H2 (eq_refl (p_recv pt llp))); intros.
