@@ -288,6 +288,71 @@ Proof.
 Admitted.
 
 
+Inductive betaPr : relation process := 
+  | betaPr_sin : forall P Q, substitutionP 0 0 0 (p_rec P) P Q -> betaPr (p_rec P) Q.
+
+Lemma guardP_break : forall P,
+    (forall n : fin, exists m : fin, guardP n m P) -> 
+    exists Q, multi betaPr P Q /\ (Q = p_inact \/ (exists e p1 p2, Q = p_ite e p1 p2) \/ (exists pt lb ex pr, Q = p_send pt lb ex pr) \/ (exists pt llp, Q = p_recv pt llp)).
+Proof.
+  intros.
+  specialize(H 1). destruct H as (m, H).
+  revert H. revert P.
+  induction m; intros.
+  - inversion H.
+    - subst. exists p_inact. split. constructor. left. easy.
+    - subst. exists (p_send pt l e g). split. constructor. right. right. left. exists pt. exists l. exists e. exists g. easy.
+    - subst. exists (p_recv p lis). split. constructor. right. right. right. exists p. exists lis. easy.
+  - inversion H. 
+    - subst. exists p_inact. split. constructor. left. easy.
+    - subst. exists (p_send pt l e g). split. constructor. right. right. left. exists pt. exists l. exists e. exists g. easy.
+    - subst. exists (p_recv p lis). split. constructor. right. right. right. exists p. exists lis. easy.
+    - subst. exists (p_ite e P0 Q). split. constructor.
+      right. left. exists e. exists P0. exists Q. easy.
+    - subst. specialize(IHm Q H3).
+      destruct IHm as (Q1,(Ha,Hb)). exists Q1. split; try easy.
+      apply multi_step with (y := Q); try easy. 
+Qed.
+
+Lemma typ_proc_after_betaPr : forall P Q Gs Gt T, 
+    multi betaPr P Q ->
+    typ_proc Gs Gt P T -> typ_proc Gs Gt Q T.
+Proof.
+  intros. revert H0. revert T Gt Gs.
+  induction H; intros.
+  - easy.
+  - apply IHmulti. clear IHmulti H0. clear z.
+    inversion H. subst.
+    specialize(_a23_d (p_rec P) P T Gs Gt H1 (eq_refl (p_rec P))); intros.
+    destruct H2 as (T0,(Ha,Hb)).
+    specialize(_a21f P (p_rec P) T0 T0 Gs Gt y); intros.
+    specialize(typable_implies_wfC H1); intros.
+    apply tc_sub with (t := T0); try easy.
+    apply H2; try easy. apply tc_mu. easy.
+Qed.
+
+Lemma betaPr_unfold_h : forall P Q1 Q Q2 p q,
+          multi betaPr P Q1 -> 
+          multi betaPr Q Q2 ->
+          unfoldP (((p <-- P) ||| (q <-- Q))) (((p <-- Q1) ||| (q <-- Q2))).
+Proof.
+  intros.
+  apply pc_trans with (M' := (p <-- Q1) ||| (q <-- Q)).
+  - apply unf_cont_l. clear H0. clear Q Q2. 
+    induction H; intros. constructor. apply pc_trans with (M' := (p <-- y)); try easy.
+    clear IHmulti H0. inversion H. subst. constructor. easy.
+  - apply unf_cont_r. clear H. clear P Q1.
+    induction H0; intros. constructor. apply pc_trans with (M' := (q <-- y)); try easy.
+    clear IHmulti H0. inversion H. subst. constructor. easy.
+Qed.
+
+Lemma betaPr_unfold : forall P Q1 Q Q2 p q M',
+          multi betaPr P Q1 -> 
+          multi betaPr Q Q2 ->
+          unfoldP (((p <-- P) ||| (q <-- Q)) ||| M') (((p <-- Q1) ||| (q <-- Q2)) ||| M').
+Proof.
+  intros. apply unf_cont_l; try easy. apply betaPr_unfold_h; try easy.
+Qed.
 
 Theorem _3_23 : forall M G, typ_sess M G -> (exists M', unfoldP M M' /\ (ForallT (fun _ P => P = p_inact) M')) \/ exists M', betaP M M'.
 Proof.
@@ -371,7 +436,72 @@ Proof.
       clear H0.
       assert(exists M1, betaP (((p <-- P) ||| (q <-- Q)) ||| M') M1).
       {
-        admit.
+        inversion H1. subst. inversion H4. subst. clear H4. inversion H7. subst. clear H7.
+        inversion H6. subst. clear H6. inversion H9. subst. clear H9.
+        destruct H5 as (T,(Hd,(Hb,Hc))). destruct H6 as (T1,(He,(Hf,Hg))).
+        clear Ha H2 H3 H8.
+        specialize(guardP_break P Hc); intros.
+        destruct H2 as (Q1,(Hh,Ho)).
+        specialize(typ_proc_after_betaPr P Q1 nil nil T Hh Hb); intros.
+        pinversion Hd. subst. assert False. apply H3. apply triv_pt_p; try easy. easy. subst. easy. subst. 
+        - specialize(guardP_break Q Hg); intros.
+          destruct H3 as (Q2,(Hj,Hl)).
+          specialize(typ_proc_after_betaPr Q Q2 nil nil T1 Hj Hf); intros.
+          clear H7 H9 Hg Hc H H1 Hd H10.
+          pinversion He; try easy. subst. assert False. apply H. apply triv_pt_q; try easy. easy.
+          subst. clear H7 H10 H9 H5 He Hb Hf.
+          assert(exists M1, betaP (((p <-- Q1) ||| (q <-- Q2)) ||| M') M1).
+          {
+            clear Hh Hj.
+            destruct Ho.
+            - subst. specialize(_a23_f p_inact (ltt_send q ys) nil nil H2 (eq_refl (p_inact))); intros. 
+              easy.
+            - destruct H. destruct H as (e,(p1,(p2,Ha))). subst.
+              specialize(_a23_c (p_ite e p1 p2) e p1 p2 (ltt_send q ys) nil nil H2 (eq_refl (p_ite e p1 p2))); intros.
+              destruct H as (T1,(T2,(Ha,(Hb,(Hc,(Hd,He)))))).
+              specialize(expr_eval_b e He); intros. 
+              destruct H.
+              - exists ((p <-- p1) ||| ((q <-- Q2) ||| M')).
+                apply r_struct with (M1' := ((p <-- p_ite e p1 p2) ||| ((q <-- Q2) ||| M'))) (M2' := ((p <-- p1) ||| ((q <-- Q2) ||| M'))); try easy. constructor. constructor. constructor. easy.
+              - exists ((p <-- p2) ||| ((q <-- Q2) ||| M')).
+                apply r_struct with (M1' := ((p <-- p_ite e p1 p2) ||| ((q <-- Q2) ||| M'))) (M2' := ((p <-- p2) ||| ((q <-- Q2) ||| M'))); try easy. constructor. constructor. constructor. easy.
+            - destruct H.
+              destruct H as (pt,(lb,(ex,(pr,Ha)))). subst.
+              specialize(_a23_bf pt lb ex pr (p_send pt lb ex pr) nil nil (ltt_send q ys) H2 (eq_refl ((p_send pt lb ex pr)))); intros. destruct H as (S,(T1,(Ht,Hb))). clear Hb H2. clear M P Q ys T1.
+              destruct Hl.
+              - subst. specialize(_a23_f p_inact (ltt_recv p ys0) nil nil H3 (eq_refl (p_inact))); intros. 
+                easy.
+              - destruct H. destruct H as (e,(p1,(p2,Ha))). subst. 
+                specialize(_a23_c (p_ite e p1 p2) e p1 p2 (ltt_recv p ys0) nil nil H3 (eq_refl (p_ite e p1 p2))); intros.
+                destruct H as (T1,(T2,(Ha,(Hb,(Hc,(Hd,He)))))).
+                specialize(expr_eval_b e He); intros. 
+                destruct H.
+                - exists ((q <-- p1) ||| ((p <-- p_send pt lb ex pr) ||| M')).
+                  apply r_struct with (M1' := ((q <-- p_ite e p1 p2) ||| ((p <-- p_send pt lb ex pr) ||| M'))) (M2' := ((q <-- p1) ||| ((p <-- p_send pt lb ex pr) ||| M'))).
+                  apply pc_trans with (M' := ((q <-- p_ite e p1 p2) ||| (p <-- p_send pt lb ex pr)) ||| M').
+                  constructor. constructor. apply unf_cont_r. constructor.
+                  constructor. easy.
+                - exists ((q <-- p2) ||| ((p <-- p_send pt lb ex pr) ||| M')).
+                  apply r_struct with (M1' := ((q <-- p_ite e p1 p2) ||| ((p <-- p_send pt lb ex pr) ||| M'))) (M2' := ((q <-- p2) ||| ((p <-- p_send pt lb ex pr) ||| M'))).
+                  apply pc_trans with (M' := ((q <-- p_ite e p1 p2) ||| (p <-- p_send pt lb ex pr)) ||| M').
+                  constructor. constructor. apply unf_cont_r. constructor.
+                  constructor. easy.
+              - destruct H. destruct H as (pt1,(lb1,(ex1,(pr1,Ha)))). subst.
+                specialize(_a23_bf pt1 lb1 ex1 pr1 (p_send pt1 lb1 ex1 pr1) nil nil (ltt_recv p ys0) H3 (eq_refl (p_send pt1 lb1 ex1 pr1))); intros.
+                destruct H as (S1,(T1,(Ha,(Hb,Hc)))). pinversion Hc. apply sub_mon.
+              - destruct H as (pt2,(llp,Ha)). subst.
+                admit.
+            - destruct H as (pt,(llp,Ha)). subst.
+              specialize(_a23_a pt llp (p_recv pt llp) nil nil (ltt_send q ys) H2 (eq_refl (p_recv pt llp))); intros.
+              destruct H as (STT,(Ha,(Hb,Hc))). pinversion Hb. apply sub_mon.
+          }
+          destruct H as (M1,Hta). exists M1.
+          apply r_struct with (M1' := (((p <-- Q1) ||| (q <-- Q2)) ||| M')) (M2' := M1); try easy.
+          apply betaPr_unfold; try easy.
+          constructor.
+          apply proj_mon.
+        subst. easy.
+        apply proj_mon.
       }
       destruct H0 as (M1,H0). exists M1.
       apply r_struct with (M1' := (((p <-- P) ||| (q <-- Q)) ||| M')) (M2' := M1); try easy. constructor.
