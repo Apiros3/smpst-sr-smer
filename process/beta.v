@@ -47,6 +47,16 @@ Inductive betaP: relation session :=
   | rf_ite  : forall p e P Q M,
               stepE e (e_val (vbool false)) ->
               betaP ((p <-- (p_ite e P Q)) ||| M) ((p <-- Q) ||| M)
+  | r_commu  : forall p q xs y l e v Q, 
+              onth l xs = Some y -> stepE e (e_val v) -> 
+              betaP ((p <-- (p_recv q xs)) ||| (q <-- (p_send p l e Q)))
+                    ((p <-- subst_expr_proc y (e_val v) 0 0) ||| (q <-- Q))
+  | rt_iteu  : forall p e P Q,
+              stepE e (e_val (vbool true)) ->
+              betaP ((p <-- (p_ite e P Q))) ((p <-- P))
+  | rf_iteu  : forall p e P Q,
+              stepE e (e_val (vbool false)) ->
+              betaP ((p <-- (p_ite e P Q))) ((p <-- Q))
   | r_struct: forall M1 M1' M2 M2', unfoldP M1 M1' -> unfoldP M2' M2 -> betaP M1' M2' -> betaP M1 M2.
 
 Definition beta_multistep := multi betaP.

@@ -34,10 +34,13 @@ Definition InT (pt : part) (M : session) : Prop :=
 
 Inductive unfoldP : relation session := 
   | pc_sub   : forall p P Q M, substitutionP 0 0 0 (p_rec P) P Q -> unfoldP (p <-- (p_rec P) ||| M) (p <-- Q ||| M)
+  | pc_subm  : forall p P Q, substitutionP 0 0 0 (p_rec P) P Q -> unfoldP (p <-- (p_rec P)) (p <-- Q)
   | pc_refl  : forall M, unfoldP M M
   | pc_trans : forall M M' M'', unfoldP M M' -> unfoldP M' M'' -> unfoldP M M''
   | pc_par1  : forall M M', unfoldP (M ||| M') (M' ||| M)
-  | pc_par2  : forall M M' M'', unfoldP ((M ||| M') ||| M'') (M ||| (M' ||| M'')).
+  | pc_par2  : forall M M' M'', unfoldP ((M ||| M') ||| M'') (M ||| (M' ||| M''))
+  | pc_par1m : forall M M' M'', unfoldP ((M ||| M') ||| M'') ((M' ||| M) ||| M'')
+  | pc_par2m : forall M M' M'' M''', unfoldP (((M ||| M') ||| M'') ||| M''') ((M ||| (M' ||| M'')) ||| M''').
 
 Inductive typ_sess : session -> gtt -> Prop := 
   | t_sess : forall M G, wfgC G ->
@@ -133,6 +136,19 @@ Proof.
       - subst. exists 0. constructor.
       - subst. 
         specialize(inj_substP H9 H); intros. subst. exists m. easy.
+  - inversion H0. subst. inversion H4. subst. clear H4. 
+    destruct H6 as (T,(Ha,(Hb,Hc))).
+    constructor; try easy.
+    constructor; try easy.
+    specialize(_a23_d (p_rec P) P T nil nil Hb (eq_refl (p_rec P))); intros.
+    destruct H4 as (T0,(Hd,He)).
+    specialize(_a21f P (p_rec P) T0 T0 nil nil Q); intros. exists T. split. easy.
+    split. specialize(typable_implies_wfC Hb); intros.
+    apply tc_sub with (t := T0); try easy. apply H4; try easy.
+    apply tc_mu; try easy.
+    intros. specialize(Hc n). destruct Hc. inversion H5.
+    - subst. exists 0. constructor.
+    - subst. specialize(inj_substP H7 H); intros. subst. exists m. easy.
   - apply IHunfoldP2. apply IHunfoldP1. easy.
   - inversion H. subst. inversion H3. subst. clear H3.
     apply t_sess; try easy.
@@ -155,7 +171,9 @@ Proof.
     easy.
 
     constructor. easy. constructor; try easy.
-Qed.
+  - admit.
+  - admit.
+Admitted.
 
 
 Inductive stepE : relation expr := 
@@ -204,33 +222,3 @@ Proof.
     apply sc_sub with (s := x); intros; try easy. apply IHstepE; try easy.
   - specialize(IHstepE1 S H). specialize(IHstepE2 S). apply IHstepE2; try easy.
 Qed.
-(* 
-Lemma expr_eval_
-
-Lemma expr_eval_b : forall e, typ_expr nil e sbool -> (stepE e (e_val (vbool true)) \/ stepE e (e_val (vbool false))).
-Proof.
-  induction e; intros; try easy.
-  - specialize(inv_expr_var (e_var n) n nil sbool H (eq_refl (e_var n))); intros.
-    destruct H0 as (S',(Ha,Hb)). destruct n; try easy.
-  - specialize(inv_expr_vali nil (e_val v) sbool v H (eq_refl (e_val v))); intros.
-    destruct H0.
-    - destruct H0 as (k,(Ha,Hb)). easy.
-    - destruct H0. destruct H0 as (k,(Ha,Hb)). inversion Ha.
-    - destruct H0 as (k,(Ha,Hb)). subst. destruct k. left. apply ec_refl. right. apply ec_refl. 
-  - specialize(inv_expr_succ nil (e_succ e) sbool e H (eq_refl (e_succ e))); intros.
-    destruct H0 as (H0,H1). destruct H1. easy. easy.
-  - specialize(inv_expr_neg nil (e_neg e) sbool e H (eq_refl (e_neg e))); intros.
-    easy.
-  - specialize(inv_expr_not nil (e_not e) sbool e H (eq_refl (e_not e))); intros.
-    destruct H0.
-    specialize(IHe H1).
-    destruct IHe. right. constructor; try easy.
-    left. constructor; try easy.
-  - specialize(inv_expr_gt nil (e_gt e1 e2) sbool e1 e2 H (eq_refl (e_gt e1 e2))); intros.
-    destruct H0 as (Ha,(Hb,Hc)).
-    
-     apply multi_step with (y := (e_val (vbool false))). constructor. easy.
-Admitted.
-
-
- *)
