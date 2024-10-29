@@ -20,3 +20,4 @@ process/substitution.v
 process/sessions.v
 process/beta.v
 process/subject_reduction.v
+process/progress.v
