@@ -221,15 +221,40 @@ Qed.
 Inductive stepE : relation expr := 
   | ec_succ  : forall e n, stepE e (e_val (vnat n)) -> stepE (e_succ e) (e_val (vnat (n+1)))
   | ec_neg   : forall e n, stepE e (e_val (vint n)) -> stepE (e_neg e) (e_val (vint (-n)))
+  | ec_neg2  : forall e n, stepE e (e_val (vnat n)) -> stepE (e_neg e) (e_val (vint (-(Z.of_nat n)))) 
   | ec_t_f   : forall e,   stepE e (e_val (vbool true)) -> stepE (e_not e) (e_val (vbool false))
   | ec_f_t   : forall e,   stepE e (e_val (vbool false)) -> stepE (e_not e) (e_val (vbool true))
-  | ec_gt_t  : forall e e' m n, Z.lt n m -> 
+  | ec_gt_t0 : forall e e' m n, Z.lt (Z.of_nat n) (Z.of_nat m) -> 
+                           stepE e (e_val (vnat m)) -> stepE e' (e_val (vnat n)) ->
+                           stepE (e_gt e e') (e_val (vbool true)) 
+  | ec_gt_t1 : forall e e' m n, Z.lt n (Z.of_nat m) -> 
+                           stepE e (e_val (vnat m)) -> stepE e' (e_val (vint n)) ->
+                           stepE (e_gt e e') (e_val (vbool true)) 
+  | ec_gt_t2 : forall e e' m n, Z.lt (Z.of_nat n) m -> 
+                           stepE e (e_val (vint m)) -> stepE e' (e_val (vnat n)) ->
+                           stepE (e_gt e e') (e_val (vbool true)) 
+  | ec_gt_t3 : forall e e' m n, Z.lt n m -> 
                            stepE e (e_val (vint m)) -> stepE e' (e_val (vint n)) ->
                            stepE (e_gt e e') (e_val (vbool true)) 
-  | ec_gt_f  : forall e e' m n, Z.le m n -> 
+  | ec_gt_f0 : forall e e' m n, Z.le (Z.of_nat m) (Z.of_nat n) -> 
+                           stepE e (e_val (vnat m)) -> stepE e' (e_val (vnat n)) ->
+                           stepE (e_gt e e') (e_val (vbool false)) 
+  | ec_gt_f1 : forall e e' m n, Z.le (Z.of_nat m) n -> 
+                           stepE e (e_val (vnat m)) -> stepE e' (e_val (vint n)) ->
+                           stepE (e_gt e e') (e_val (vbool false)) 
+  | ec_gt_f2 : forall e e' m n, Z.le m (Z.of_nat n) -> 
+                           stepE e (e_val (vint m)) -> stepE e' (e_val (vnat n)) ->
+                           stepE (e_gt e e') (e_val (vbool false)) 
+  | ec_gt_f3 : forall e e' m n, Z.le m n -> 
                            stepE e (e_val (vint m)) -> stepE e' (e_val (vint n)) ->
-                           stepE (e_gt e e') (e_val (vbool true)) 
-  | ec_plus  : forall e e' m n, stepE e (e_val (vint n)) -> stepE e' (e_val (vint m)) -> 
+                           stepE (e_gt e e') (e_val (vbool false)) 
+  | ec_plus0 : forall e e' m n, stepE e (e_val (vnat n)) -> stepE e' (e_val (vnat m)) -> 
+                           stepE (e_plus e e') (e_val (vint ((Z.of_nat n) + (Z.of_nat m))))
+  | ec_plus1 : forall e e' m n, stepE e (e_val (vnat n)) -> stepE e' (e_val (vint m)) -> 
+                           stepE (e_plus e e') (e_val (vint ((Z.of_nat n) + m)))
+  | ec_plus2 : forall e e' m n, stepE e (e_val (vint n)) -> stepE e' (e_val (vnat m)) -> 
+                           stepE (e_plus e e') (e_val (vint (n + (Z.of_nat m))))
+  | ec_plus3 : forall e e' m n, stepE e (e_val (vint n)) -> stepE e' (e_val (vint m)) -> 
                            stepE (e_plus e e') (e_val (vint (n + m)))
   | ec_detl  : forall m n v, stepE m v -> stepE (e_det m n) v
   | ec_detr  : forall m n v, stepE n v -> stepE (e_det m n) v
@@ -246,14 +271,34 @@ Proof.
     apply sc_sub with (s := snat). apply sc_valn. apply sni.
   - specialize(inv_expr_neg Gs (e_neg e) S e H (eq_refl (e_neg e))); intros.
     destruct H1. subst. apply sc_vali.
+  - specialize(inv_expr_neg Gs (e_neg e) S e H (eq_refl (e_neg e))); intros.
+    destruct H1. subst. apply sc_vali.
   - specialize(inv_expr_not Gs (e_not e) S e H (eq_refl (e_not e))); intros.
     destruct H1. subst. apply sc_valb.
-    specialize(inv_expr_not Gs (e_not e) S e H (eq_refl (e_not e))); intros.
+  - specialize(inv_expr_not Gs (e_not e) S e H (eq_refl (e_not e))); intros.
     destruct H1. subst. apply sc_valb.
   - specialize(inv_expr_gt Gs (e_gt e e') S e e' H0 (eq_refl (e_gt e e'))); intros.
     destruct H1. destruct H2. subst. apply sc_valb.
   - specialize(inv_expr_gt Gs (e_gt e e') S e e' H0 (eq_refl (e_gt e e'))); intros.
     destruct H1. destruct H2. subst. apply sc_valb.
+  - specialize(inv_expr_gt Gs (e_gt e e') S e e' H0 (eq_refl (e_gt e e'))); intros.
+    destruct H1. destruct H2. subst. apply sc_valb.
+  - specialize(inv_expr_gt Gs (e_gt e e') S e e' H0 (eq_refl (e_gt e e'))); intros.
+    destruct H1. destruct H2. subst. apply sc_valb.
+  - specialize(inv_expr_gt Gs (e_gt e e') S e e' H0 (eq_refl (e_gt e e'))); intros.
+    destruct H1. destruct H2. subst. apply sc_valb.
+  - specialize(inv_expr_gt Gs (e_gt e e') S e e' H0 (eq_refl (e_gt e e'))); intros.
+    destruct H1. destruct H2. subst. apply sc_valb.
+  - specialize(inv_expr_gt Gs (e_gt e e') S e e' H0 (eq_refl (e_gt e e'))); intros.
+    destruct H1. destruct H2. subst. apply sc_valb.
+  - specialize(inv_expr_gt Gs (e_gt e e') S e e' H0 (eq_refl (e_gt e e'))); intros.
+    destruct H1. destruct H2. subst. apply sc_valb.
+  - specialize(inv_expr_plus Gs (e_plus e e') S e e' H (eq_refl (e_plus e e'))); intros.
+    destruct H0. destruct H1. subst. apply sc_vali.
+  - specialize(inv_expr_plus Gs (e_plus e e') S e e' H (eq_refl (e_plus e e'))); intros.
+    destruct H0. destruct H1. subst. apply sc_vali.
+  - specialize(inv_expr_plus Gs (e_plus e e') S e e' H (eq_refl (e_plus e e'))); intros.
+    destruct H0. destruct H1. subst. apply sc_vali.
   - specialize(inv_expr_plus Gs (e_plus e e') S e e' H (eq_refl (e_plus e e'))); intros.
     destruct H0. destruct H1. subst. apply sc_vali.
   - specialize(inv_expr_det Gs (e_det m n) S m n H (eq_refl (e_det m n))); intros.

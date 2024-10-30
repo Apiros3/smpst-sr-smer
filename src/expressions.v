@@ -5,12 +5,10 @@ Notation fin := nat.
 Variant value: Type :=
   | vint : Z    -> value
   | vbool: bool -> value
-  | vunit: unit -> value
   | vnat : nat -> value.
 
 
 Inductive sort: Type :=
-  | sunit: sort
   | sbool: sort
   | sint : sort
   | snat : sort.

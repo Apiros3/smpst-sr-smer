@@ -257,6 +257,74 @@ Proof.
     constructor; try easy.
 Qed.
 
+Lemma expr_eval_n : forall e, typ_expr nil e snat -> (exists k, stepE e (e_val (vnat k))).
+Proof.
+  induction e; intros; try easy.
+  - specialize(inv_expr_var (e_var n) n nil snat H (eq_refl (e_var n))); intros.
+    destruct H0 as (S',(Ha,Hb)). destruct n; try easy.
+  - specialize(inv_expr_vali nil (e_val v) snat v H (eq_refl (e_val v))); intros.
+    destruct H0.
+    - destruct H0 as (k,(Ha,Hb)). subst. easy.
+    - destruct H0. destruct H0 as (k,(Ha,Hb)). subst. exists k. constructor.
+    - destruct H0 as (k,(Ha,Hb)). subst. easy.
+  - specialize(inv_expr_succ nil (e_succ e) snat e H (eq_refl (e_succ e))); intros.
+    destruct H0 as (H0,H1). destruct H1. specialize(IHe H0). destruct IHe as (k,Ha). exists (k+1). constructor. easy. easy.
+  - specialize(inv_expr_neg nil (e_neg e) snat e H (eq_refl (e_neg e))); intros.
+    easy.
+  - specialize(inv_expr_not nil (e_not e) snat e H (eq_refl (e_not e))); intros.
+    destruct H0. easy.
+  - specialize(inv_expr_gt nil (e_gt e1 e2) snat e1 e2 H (eq_refl (e_gt e1 e2))); intros.
+    destruct H0 as (Ha,(Hb,Hc)). easy.
+  - specialize(inv_expr_plus nil (e_plus e1 e2) snat e1 e2 H (eq_refl (e_plus e1 e2))); intros.
+    easy.
+  - specialize(inv_expr_det nil (e_det e1 e2) snat e1 e2 H (eq_refl (e_det e1 e2))); intros.
+    destruct H0 as (k,(Ha,(Hb,Hc))). inversion Hc. subst.
+    specialize(IHe1 Ha). destruct IHe1. exists x. constructor. easy.
+Qed.
+
+Lemma expr_eval_i : forall e, typ_expr nil e sint -> (exists k, stepE e (e_val (vint k))) \/ (exists k, stepE e (e_val (vnat k))).
+Proof.
+  induction e; intros; try easy.
+  - specialize(inv_expr_var (e_var n) n nil sint H (eq_refl (e_var n))); intros.
+    destruct H0 as (S',(Ha,Hb)). destruct n; try easy.
+  - specialize(inv_expr_vali nil (e_val v) sint v H (eq_refl (e_val v))); intros.
+    destruct H0.
+    - destruct H0 as (k,(Ha,Hb)). subst. left. exists k. constructor.
+    - destruct H0. destruct H0 as (k,(Ha,Hb)). subst. right. exists k. constructor.
+    - destruct H0 as (k,(Ha,Hb)). subst. easy.
+  - specialize(inv_expr_succ nil (e_succ e) sint e H (eq_refl (e_succ e))); intros.
+    destruct H0 as (H0,H1). destruct H1. right. easy.
+    specialize(expr_eval_n e H0); intros. destruct H2 as (k,H2). 
+    right. exists (k+1). constructor. easy.
+  - specialize(inv_expr_neg nil (e_neg e) sint e H (eq_refl (e_neg e))); intros.
+    destruct H0. specialize(IHe H1).
+    destruct IHe.
+    - destruct H2 as (k,Ha). left. exists (Z.opp k). constructor. easy.
+    - destruct H2 as (k,Ha). left. exists (Z.opp (Z.of_nat k)). apply ec_neg2. easy.
+  - specialize(inv_expr_not nil (e_not e) sint e H (eq_refl (e_not e))); intros.
+    destruct H0. easy.
+  - specialize(inv_expr_gt nil (e_gt e1 e2) sint e1 e2 H (eq_refl (e_gt e1 e2))); intros.
+    destruct H0 as (Ha,(Hb,Hc)). easy.
+  - specialize(inv_expr_plus nil (e_plus e1 e2) sint e1 e2 H (eq_refl (e_plus e1 e2))); intros.
+    destruct H0 as (Ha,(Hb,Hc)). specialize(IHe1 Hb). specialize(IHe2 Hc).
+    left.
+    - destruct IHe1.
+      destruct H0 as (k,H0).
+      destruct IHe2.
+      - destruct H1 as (k1,H1). exists (Z.add k k1). constructor; try easy.
+      - destruct H1 as (k1,H1). exists (Z.add k (Z.of_nat k1)). constructor; try easy.
+    - destruct H0 as (k,H0).
+      destruct IHe2.
+      - destruct H1 as (k1,H1). exists (Z.add (Z.of_nat k) k1). constructor; try easy.
+      - destruct H1 as (k1,H1). exists (Z.add (Z.of_nat k) (Z.of_nat k1)). constructor; try easy.
+  - specialize(inv_expr_det nil (e_det e1 e2) sint e1 e2 H (eq_refl (e_det e1 e2))); intros.
+    destruct H0 as (k,(Ha,(Hb,Hc))). inversion Hc. subst.
+    - specialize(expr_eval_n e1 Ha); intros. destruct H0 as (k,Hd). right. exists k. constructor. easy.
+    - subst.
+      specialize(IHe1 Ha). destruct IHe1.
+      destruct H0. left. exists x. constructor. easy.
+      destruct H0. right. exists x. constructor. easy.
+Qed.
 
 Lemma expr_eval_b : forall e, typ_expr nil e sbool -> (stepE e (e_val (vbool true)) \/ stepE e (e_val (vbool false))).
 Proof.
@@ -279,16 +347,45 @@ Proof.
     left. constructor; try easy.
   - specialize(inv_expr_gt nil (e_gt e1 e2) sbool e1 e2 H (eq_refl (e_gt e1 e2))); intros.
     destruct H0 as (Ha,(Hb,Hc)).
-    admit.
+    specialize(expr_eval_i e1 Hb); intros. 
+    specialize(expr_eval_i e2 Hc); intros.
+    clear Ha H IHe1 IHe2.
+    destruct H0.
+    - destruct H as (k,H).
+      destruct H1.
+      - destruct H0 as (k1,H0). 
+        specialize(Zle_or_lt k k1); intros. destruct H1. 
+        right. apply ec_gt_f3 with (m := k) (n := k1); try easy.
+        left. apply ec_gt_t3 with (m := k) (n := k1); try easy.
+      - destruct H0 as (k1,H0).
+        specialize(Zle_or_lt k (Z.of_nat k1)); intros. destruct H1. 
+        right. apply ec_gt_f2 with (m := k) (n := k1); try easy.
+        left. apply ec_gt_t2 with (m := k) (n := k1); try easy.
+    - destruct H as (k,H).
+      destruct H1.
+      - destruct H0 as (k1,H0).
+        specialize(Zle_or_lt (Z.of_nat k) k1); intros. destruct H1. 
+        right. apply ec_gt_f1 with (m := k) (n := k1); try easy.
+        left. apply ec_gt_t1 with (m := k) (n := k1); try easy.
+      - destruct H0 as (k1,H0).
+        specialize(Zle_or_lt (Z.of_nat k) (Z.of_nat k1)); intros. destruct H1. 
+        right. apply ec_gt_f0 with (m := k) (n := k1); try easy.
+        left. apply ec_gt_t0 with (m := k) (n := k1); try easy.
   - specialize(inv_expr_plus nil (e_plus e1 e2) sbool e1 e2 H (eq_refl (e_plus e1 e2))); intros.
     easy.
   - specialize(inv_expr_det nil (e_det e1 e2) sbool e1 e2 H (eq_refl (e_det e1 e2))); intros.
     destruct H0 as (k,(Ha,(Hb,Hc))). inversion Hc. subst.
     specialize(IHe1 Ha). destruct IHe1. left. constructor. easy. right. constructor. easy.
-Admitted.
+Qed.
 
 Lemma expr_eval_ss : forall ex S, typ_expr nil ex S -> exists v, stepE ex (e_val v).
-Admitted.
+Proof.
+  intros.
+  destruct S. 
+  - specialize(expr_eval_b ex H); intros. destruct H0. exists (vbool true). easy. exists (vbool false). easy.
+  - specialize(expr_eval_i ex H); intros. destruct H0. destruct H0. exists (vint x). easy. destruct H0. exists (vnat x). easy.
+  - specialize(expr_eval_n ex H); intros. destruct H0. exists (vnat x). easy.
+Qed.
 
 Inductive betaPr : relation process := 
   | betaPr_sin : forall P Q, substitutionP 0 0 0 (p_rec P) P Q -> betaPr (p_rec P) Q.
@@ -673,11 +770,21 @@ Proof.
 Qed.
 
 
+Definition stuck (M : session) := ((exists M', unfoldP M M' /\ ForallT (fun _ P => P = p_inact) M') -> False) /\ ((exists M', betaP M M') -> False).
 
+Definition stuckM (M : session) := exists M', multi betaP M M' /\ stuck M'.
 
-
-
-
-
+Theorem _3_24 : forall M G, typ_sess M G -> stuckM M -> False.
+Proof.
+  intros. 
+  unfold stuckM in H0. destruct H0 as (M',(Ha,Hb)).
+  revert Hb H. revert G.
+  induction Ha; intros.
+  - destruct Hb.
+    specialize(_3_23 x G H); intros. destruct H2. apply H0. easy. apply H1. easy.
+  - specialize(_3_21 x y G H0 H); intros.
+    destruct H1 as (G',(Hc,Hd)).
+    apply IHHa with (G := G'); try easy.
+Qed.
 
 
