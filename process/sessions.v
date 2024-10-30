@@ -8,6 +8,14 @@ Inductive session: Type :=
   | s_ind : part   -> process -> session
   | s_par : session -> session -> session.
   
+Inductive guardP : fin -> fin -> process -> Prop :=  
+  | gp_nil : forall m G, guardP 0 m G
+  | gp_inact : forall n m, guardP n m p_inact
+  | gp_send : forall n m pt l e g, guardP n m g -> guardP (S n) m (p_send pt l e g)
+  | gp_recv : forall n m p lis, List.Forall (fun u => u = None \/ (exists g, u = Some g /\ guardP n m g)) lis -> guardP (S n) m (p_recv p lis)
+  | gp_ite : forall n m P Q e, guardP n m P -> guardP n m Q -> guardP n (S m) (p_ite e P Q)
+  | gp_rec : forall n m g Q, substitutionP 0 0 0 (p_rec g) g Q -> guardP n m Q -> guardP n (S m) (p_rec g).
+
 Notation "p '<--' P"   :=  (s_ind p P) (at level 50, no associativity).
 Notation "s1 '|||' s2" :=  (s_par s1 s2) (at level 50, no associativity).
 
@@ -23,256 +31,24 @@ Fixpoint flattenT (M : session) : (list part) :=
 
 Definition InT (pt : part) (M : session) : Prop :=
   In pt (flattenT M).
-  
+
+Inductive unfoldP : relation session := 
+  | pc_sub   : forall p P Q M, substitutionP 0 0 0 (p_rec P) P Q -> unfoldP (p <-- (p_rec P) ||| M) (p <-- Q ||| M)
+  | pc_subm  : forall p P Q, substitutionP 0 0 0 (p_rec P) P Q -> unfoldP (p <-- (p_rec P)) (p <-- Q)
+  | pc_refl  : forall M, unfoldP M M
+  | pc_trans : forall M M' M'', unfoldP M M' -> unfoldP M' M'' -> unfoldP M M''
+  | pc_par1  : forall M M', unfoldP (M ||| M') (M' ||| M)
+  | pc_par2  : forall M M' M'', unfoldP ((M ||| M') ||| M'') (M ||| (M' ||| M''))
+  | pc_par1m : forall M M' M'', unfoldP ((M ||| M') ||| M'') ((M' ||| M) ||| M'')
+  | pc_par2m : forall M M' M'' M''', unfoldP (((M ||| M') ||| M'') ||| M''') ((M ||| (M' ||| M'')) ||| M''').
+
 Inductive typ_sess : session -> gtt -> Prop := 
   | t_sess : forall M G, wfgC G ->
                          (forall pt, isgPartsC pt G -> InT pt M) ->
                          NoDup (flattenT M) ->
-                         ForallT (fun u P => exists T, projectionC G u T /\ typ_proc nil nil P T) M ->
+                         ForallT (fun u P => exists T, projectionC G u T /\ typ_proc nil nil P T /\ (forall n, exists m, guardP n m P)) M ->
                          typ_sess M G.
 
-
-Inductive stepE : relation expr := 
-  | ec_var   : forall n, stepE (e_var n) (e_var n)
-  | ec_val   : forall v, stepE (e_val v) (e_val v)
-  | ec_succ  : forall n, stepE (e_succ (e_val (vnat n))) (e_val (vnat (n+1)))
-  | ec_neg   : forall n, stepE (e_neg (e_val (vint n))) (e_val (vint (-n)))
-  | ec_t_f   :           stepE (e_not (e_val (vbool true))) (e_val (vbool false))
-  | ec_f_t   :           stepE (e_not (e_val (vbool false))) (e_val (vbool true))
-  | ec_gt_t  : forall m n, Z.lt n m -> stepE (e_gt (e_val (vint m)) (e_val (vint n))) (e_val (vbool true)) 
-  | ec_gt_f  : forall m n, Z.le m n -> stepE (e_gt (e_val (vint m)) (e_val (vint n))) (e_val (vbool false))
-  | ec_plus  : forall m n, stepE (e_plus (e_val (vint n)) (e_val (vint m))) (e_val (vint (n + m)))
-  | ec_detl  : forall m n v, stepE m v -> stepE (e_det m n) v
-  | ec_detr  : forall m n v, stepE n v -> stepE (e_det m n) v.
-
-Inductive multi {X : Type} (R : relation X) : relation X :=
-  | multi_refl : forall (x : X), multi R x x 
-  | multi_step : forall (x y z : X), R x y -> multi R y z -> multi R x z.
-  
-Lemma transitive_multi {X : Type} : forall (R : relation X) (x y z : X), multi R x y -> multi R y z -> multi R x z.
-Proof.
-  intros R x y z H.
-  revert z.
-  induction H; intros. easy.
-  specialize(IHmulti z0 H1).
-  specialize(@multi_step X R); intros.
-  apply H2 with (y := y). easy. easy.
-Qed.
-
-Definition stepE_multi := multi stepE.
-   
-Inductive scongP : relation process := 
-  | pc_inact : scongP p_inact p_inact
-  | pc_var   : forall n, scongP (p_var n) (p_var n)
-  | pc_mu    : forall X Y, scongP X Y -> scongP (p_rec X) (p_rec Y)
-  | pc_ite   : forall e X X' Y Y', scongP X X' -> scongP Y Y' -> scongP (p_ite e X Y) (p_ite e X' Y')
-  | pc_recv  : forall pt xs ys, Forall2 (fun u v => (u = None /\ v = None) \/ (exists P Q, u = Some P /\ v = Some Q /\ scongP P Q)) xs ys -> scongP (p_recv pt xs) (p_recv pt ys)
-  | pc_send  : forall pt lb e X X', scongP X X' -> scongP (p_send pt lb e X) (p_send pt lb e X')
-  | pc_sub   : forall P Q, substitutionP 0 0 0 (p_rec P) P Q -> scongP (p_rec P) Q
-  | pc_trans : forall P Q R, scongP P Q -> scongP Q R -> scongP P R.
-
-Section scongP_ind_ref.
-  Variable P : process -> process -> Prop.
-  Hypothesis P_inact : P p_inact p_inact.
-  Hypothesis P_var   : forall n, P (p_var n) (p_var n).
-  Hypothesis P_mu    : forall X Y, P X Y -> P (p_rec X) (p_rec Y).
-  Hypothesis P_ite   : forall e X X' Y Y', P X X' -> P Y Y' -> P (p_ite e X Y) (p_ite e X' Y').
-  Hypothesis P_recv  : forall pt xs ys, Forall2 (fun u v => (u = None /\ v = None) \/ (exists X Y, u = Some X /\ v = Some Y /\ P X Y)) xs ys -> P (p_recv pt xs) (p_recv pt ys).
-  Hypothesis P_send  : forall pt lb e X X', P X X' -> P (p_send pt lb e X) (p_send pt lb e X').
-  Hypothesis P_sub   : forall X Y, substitutionP 0 0 0 (p_rec X) X Y -> P (p_rec X) Y.
-  Hypothesis P_trans : forall X Y Z, P X Y -> P Y Z -> P X Z.
-  
-  Fixpoint scongP_ind_ref (X Y : process) (a : scongP X Y) {struct a} : P X Y.
-  Proof.
-    refine (match a with
-      | pc_inact => P_inact
-      | pc_var n => P_var n 
-      | pc_mu X Y Hp => P_mu X Y (scongP_ind_ref X Y Hp)
-      | pc_ite e X X' Y Y' Hx Hy => P_ite e X X' Y Y' (scongP_ind_ref X X' Hx) (scongP_ind_ref Y Y' Hy)
-      | pc_recv pt xs ys Ha => P_recv pt xs ys _
-      | pc_send pt lb e X X' Hx => P_send pt lb e X X' (scongP_ind_ref X X' Hx)
-      | pc_sub X Y Hs => P_sub X Y Hs
-      | pc_trans X Y Z Hxy Hyz => P_trans X Y Z (scongP_ind_ref X Y Hxy) (scongP_ind_ref Y Z Hyz)
-    end); try easy.
-    revert Ha. apply Forall2_mono. intros.
-    destruct H. left. easy.
-    destruct H. destruct H. destruct H. destruct H0. subst. right.
-    exists x0. exists x1. split; try easy. split; try easy.
-    apply scongP_ind_ref; try easy.
-  Qed.
-End scongP_ind_ref.
-
-Inductive scong: relation session :=
-  | sc_multi: forall p P Q M, scongP P Q -> scong (p <-- P ||| M) (p <-- Q ||| M) 
-  | sc_par1 : forall p M, scong (p <-- p_inact ||| M) M
-  | sc_par2 : forall M M', scong (M ||| M') (M' ||| M)
-  | sc_par3 : forall M M' M'', scong ((M ||| M') ||| M'') (M ||| (M' ||| M'')).
-
-
-
-Lemma expr_typ_step : forall Gs e e' S, typ_expr Gs e S -> stepE e e' -> typ_expr Gs e' S.
-Proof.
-  intros. revert H. revert S. induction H0; intros; try easy.
-  - specialize(inv_expr_succ Gs (e_succ (e_val (vnat n))) S (e_val (vnat n)) H (eq_refl (e_succ (e_val (vnat n))))); intros.
-    destruct H0. destruct H1; subst.
-    apply sc_valn.
-    apply sc_sub with (s := snat). apply sc_valn. apply sni.
-  - specialize(inv_expr_neg Gs (e_neg (e_val (vint n))) S (e_val (vint n)) H (eq_refl (e_neg (e_val (vint n))))); intros.
-    destruct H0. subst. apply sc_vali.
-  - specialize(inv_expr_not Gs (e_not (e_val (vbool true))) S (e_val (vbool true)) H (eq_refl (e_not (e_val (vbool true))))); intros.
-    destruct H0. subst. apply sc_valb.
-    specialize(inv_expr_not Gs (e_not (e_val (vbool false))) S (e_val (vbool false)) H (eq_refl (e_not (e_val (vbool false))))); intros.
-    destruct H0. subst. apply sc_valb.
-  - specialize(inv_expr_gt Gs (e_gt (e_val (vint m)) (e_val (vint n))) S (e_val (vint m)) (e_val (vint n)) H0 (eq_refl (e_gt (e_val (vint m)) (e_val (vint n))))); intros.
-    destruct H1. destruct H2. subst. apply sc_valb.
-  - specialize(inv_expr_gt Gs (e_gt (e_val (vint m)) (e_val (vint n))) S (e_val (vint m)) (e_val (vint n)) H0 (eq_refl (e_gt (e_val (vint m)) (e_val (vint n))))); intros.
-    destruct H1. destruct H2. subst. apply sc_valb.
-  - specialize(inv_expr_plus Gs (e_plus (e_val (vint n)) (e_val (vint m))) S (e_val (vint n)) (e_val (vint m)) H (eq_refl (e_plus (e_val (vint n)) (e_val (vint m))))); intros.
-    destruct H0. destruct H1. subst. apply sc_vali.
-  - specialize(inv_expr_det Gs (e_det m n) S m n H (eq_refl (e_det m n))); intros.
-    destruct H1. destruct H1. destruct H2.
-    apply sc_sub with (s := x); intros; try easy. apply IHstepE; try easy.
-  - specialize(inv_expr_det Gs (e_det m n) S m n H (eq_refl (e_det m n))); intros.
-    destruct H1. destruct H1. destruct H2.
-    apply sc_sub with (s := x); intros; try easy. apply IHstepE; try easy.
-Qed.
-
-
-Lemma expr_typ_multi : forall Gs e e' S, typ_expr Gs e S -> stepE_multi e e' -> typ_expr Gs e' S.
-Proof.
-  intros. revert H. revert S. induction H0; intros; try easy.
-  apply IHmulti.
-  apply expr_typ_step with (e := x); try easy.
-Qed.
-  
-Lemma _a22_2_helperP_1 : forall xs x l' Gs Gt,
-      Forall2
-       (fun u v : option process =>
-        u = None /\ v = None \/
-        (exists X Y : process,
-           u = Some X /\
-           v = Some Y /\
-           (forall (Gs : ctxS) (Gt : ctxT) (T : ltt), typ_proc Gs Gt X T -> typ_proc Gs Gt Y T))) xs l' ->
-      Forall2
-        (fun (u : option process) (v : option (sort * ltt)) =>
-         u = None /\ v = None \/
-         (exists (p : process) (s : sort) (t : ltt),
-            u = Some p /\ v = Some (s, t) /\ typ_proc (Some s :: Gs) Gt p t)) xs x ->
-      Forall2
-      (fun (u : option process) (v : option (sort * ltt)) =>
-       u = None /\ v = None \/
-       (exists (p : process) (s : sort) (t : ltt),
-          u = Some p /\ v = Some (s, t) /\ typ_proc (Some s :: Gs) Gt p t)) l' x.
-Proof.
-  intro xs. induction xs; intros; try easy.
-  inversion H. subst. inversion H0. subst. easy.
-  inversion H. subst. inversion H0. subst. clear H H0.
-  constructor. destruct H3. left. destruct H4; try easy.
-  destruct H. destruct H0. destruct H0. destruct H0. destruct H0. subst. easy.
-  right. destruct H. destruct H. destruct H. destruct H0. subst.
-  exists x0. destruct H4. easy. destruct H. destruct H. destruct H. destruct H. destruct H0. subst.
-  exists x2. exists x3. split; try easy. split; try easy.
-  apply H1. inversion H. subst. easy.
-  apply IHxs; try easy.
-Qed.
-
-Lemma _a22_2_helperP_2 : forall xs l',
-      SList xs ->
-      Forall2
-       (fun u v : option process =>
-        u = None /\ v = None \/
-        (exists X Y : process,
-           u = Some X /\
-           v = Some Y /\
-           (forall (Gs : ctxS) (Gt : ctxT) (T : ltt), typ_proc Gs Gt X T -> typ_proc Gs Gt Y T))) xs l' ->
-      SList l'.
-Proof.
-  intro xs. induction xs; intros; try easy.
-  inversion H0. subst. 
-  specialize(SList_f a xs H); intros. destruct H1.
-  - apply SList_b. apply IHxs; try easy.
-  - destruct H1. destruct H2. subst. inversion H5. subst. destruct H3; try easy.
-    destruct H1. destruct H1. destruct H1. destruct H2. subst. easy.
-Qed.
-  
-Lemma _a22_2_helperP_h : forall Gs Gt pt xs ys T,
-    typ_proc Gs Gt (p_recv pt xs) T ->
-    Forall2
-      (fun u v : option process =>
-       u = None /\ v = None \/
-       (exists X Y : process,
-          u = Some X /\
-          v = Some Y /\
-          (forall (Gs : ctxS) (Gt : ctxT) (T : ltt), typ_proc Gs Gt X T -> typ_proc Gs Gt Y T))) xs ys ->
-    typ_proc Gs Gt (p_recv pt ys) T.
-Proof.
-  intros Gs Gt pt xs. revert Gs Gt pt.
-  induction xs; intros; try easy.
-  - inversion H0. subst. easy.
-  - inversion H0. subst. clear H0.
-    specialize(_a23_a pt (a :: xs) (p_recv pt (a :: xs)) Gs Gt T H (eq_refl (p_recv pt (a :: xs)))); intros.
-    destruct H0. destruct H0. destruct H1. destruct H2.
-    apply tc_sub with (t := ltt_recv pt x); try easy.
-    destruct x; try easy.
-    apply tc_recv; try easy.
-    simpl. apply eq_S.
-    inversion H0.
-    specialize(Forall2_length H5); intros. easy.
-    specialize(SList_f a xs H4); intros. clear H4. destruct H6.
-    - apply SList_b.
-      apply _a22_2_helperP_2 with (xs := xs); try easy.
-    - destruct H4. destruct H6. subst. destruct H3; try easy.
-      destruct H3. destruct H3. destruct H3. destruct H4. inversion H3. subst.
-      inversion H5. subst. easy.
-    - constructor. 
-      destruct H3. left. destruct H3. inversion H2. subst.
-      destruct H10. easy. destruct H3. destruct H3. destruct H3. easy.
-      right.
-      destruct H3. destruct H3. destruct H3. destruct H6. 
-      exists x1.
-      inversion H2; subst. destruct H11; try easy.
-      destruct H3. destruct H3. destruct H3. destruct H3. destruct H6. subst.
-      exists x3. exists x4.
-      split; try easy. split; try easy. 
-      apply H7. inversion H3. subst. easy.
-    - inversion H2. subst. clear H2.
-      apply _a22_2_helperP_1 with (xs := xs); try easy.
-      apply typable_implies_wfC with (P := (p_recv pt (a :: xs))) (Gs := Gs) (Gt := Gt); try easy.
-Qed.
-
-Lemma _a22_1 : forall Gs Gt P Q T, typ_proc Gs Gt P T -> scongP P Q -> typ_proc Gs Gt Q T.
-Proof.
-  intros. revert H. revert Gs Gt T.
-  induction H0 using scongP_ind_ref; intros; try easy.
-  - specialize(_a23_d (p_rec X) X T Gs Gt H (eq_refl (p_rec X))); intros.
-    destruct H0. destruct H0. 
-    specialize(IHscongP Gs (Some x :: Gt) x H0).
-    apply tc_sub with (t := x); try easy.
-    apply tc_mu; try easy.
-    apply typable_implies_wfC with (P := p_rec X) (Gs := Gs) (Gt := Gt); try easy.
-  - specialize(_a23_c (p_ite e X Y) e X Y T Gs Gt H (eq_refl (p_ite e X Y))); intros.
-    destruct H0. destruct H0. destruct H0. destruct H1. destruct H2. destruct H3.
-    apply tc_ite. easy.
-    apply IHscongP; try easy. apply tc_sub with (t := x); try easy.
-    apply typable_implies_wfC with (P := p_ite e X Y) (Gs := Gs) (Gt := Gt); try easy.
-    apply IHscongP0; try easy. apply tc_sub with (t := x0); try easy.
-    apply typable_implies_wfC with (P := p_ite e X Y) (Gs := Gs) (Gt := Gt); try easy.
-  - apply _a22_2_helperP_h with (xs := xs); try easy.
-  - specialize(_a23_bf pt lb e X (p_send pt lb e X) Gs Gt T H (eq_refl (p_send pt lb e X))); intros.
-    destruct H0. destruct H0. destruct H0. destruct H1.
-    apply tc_sub with (t := (ltt_send pt (extendLis lb (Some (x, x0))))); try easy.
-    apply tc_send; try easy.
-    apply IHscongP; try easy.
-    apply typable_implies_wfC with (P := p_send pt lb e X) (Gs := Gs) (Gt := Gt). easy.
-  - specialize(_a23_d (p_rec X) X T Gs Gt H0 (eq_refl (p_rec X))); intros.
-    destruct H1. destruct H1.  
-    specialize(_a21f X (p_rec X)); intros.
-    apply tc_sub with (t := x); intros; try easy.
-    apply H3 with (T := x); try easy.
-    apply tc_mu; intros; try easy.
-    apply typable_implies_wfC with (P := p_rec X) (Gs := Gs) (Gt := Gt); try easy.
-  - apply IHscongP0; try easy. apply IHscongP; try easy.
-Qed.
 
 Lemma noin_mid {A} : forall (l1 l2 : list A) a a0, ~ In a0 (l1 ++ a :: l2) -> ~ In a0 (l1 ++ l2) /\ a <> a0.
 Proof.
@@ -295,6 +71,18 @@ Proof.
   simpl in H. destruct H. right. left. easy.
   specialize(IHl1 l2 a0 pt H); intros. destruct IHl1. left. easy.
   right. right. easy.
+Qed.
+
+Lemma in_or {A} : forall (l1 l2 : list A) pt, In pt (l1 ++ l2) -> In pt l1 \/ In pt l2.
+Proof.
+  induction l1; intros; try easy.
+  right. easy.
+  simpl in H.
+  destruct H.
+  - left. constructor. easy.
+  - specialize(IHl1 l2 pt H). destruct IHl1.
+    - left. right. easy.
+    - right. easy.
 Qed.
 
 Lemma noin_swap {A} : forall (l1 l2 : list A) a, ~ In a (l1 ++ l2) -> ~ In a (l2 ++ l1).
@@ -327,22 +115,58 @@ Proof.
   destruct H0. left. easy. right. apply IHl2; try easy.
 Qed.
 
-Lemma _a22_2 : forall M M' G, typ_sess M G -> scong M M' -> typ_sess M' G.
+Lemma in_swap2 {A} : forall (l1 l2 l3 : list A) pt, In pt (l3 ++ l1 ++ l2) -> In pt (l3 ++ l2 ++ l1).
+Proof.
+  induction l3; intros. simpl in *.
+  - apply in_swap. easy.
+  - simpl in *. destruct H. left. easy.
+    specialize(IHl3 pt H). right. easy.
+Qed.
+
+Lemma nodup_swap2 {A} : forall (l1 l2 l3 : list A), NoDup (l3 ++ l1 ++ l2) -> NoDup (l3 ++ l2 ++ l1).
+Proof.
+  induction l3; intros.
+  - simpl in *. apply nodup_swap. easy.
+  - inversion H. subst. specialize(IHl3 H3). constructor; try easy.
+    unfold not in *.
+    intros. apply H2.
+    apply in_swap2. easy.
+Qed.
+
+Lemma _a22_2 : forall M M' G, typ_sess M G -> unfoldP M M' -> typ_sess M' G.
 Proof.
   intros. revert H. revert G. induction H0; intros; try easy.
-  - inversion H0. subst.
+  - inversion H0. subst. 
     inversion H4. subst. clear H4. inversion H7. subst. clear H7. 
     apply t_sess; try easy. constructor; try easy. constructor; try easy.
-    destruct H5. exists x. split; try easy. destruct H4.
-    apply _a22_1 with (P := P); try easy.
-  - inversion H. subst. inversion H3. subst. clear H3.
-    inversion H6. subst. clear H6. destruct H4. destruct H3.
-    apply t_sess; try easy.
-    specialize(_a23_f p_inact x nil nil H4 (eq_refl p_inact)); intros. subst.
-    unfold InT in *. simpl in *. specialize(H1 pt H6).
-    specialize(pmergeCR G p H0 H3); intros. 
-    destruct H1; try easy. subst. specialize(H5 H6). easy.
-    simpl in H2. inversion H2. subst. easy.
+    destruct H5. exists x. split; try easy. destruct H4. split.
+    destruct H5 as (H5, H6).
+    - specialize(_a23_d (p_rec P) P x nil nil H5 (eq_refl (p_rec P))); intros.
+      destruct H7 as (T,(Ha,Hb)).
+      specialize(_a21f P (p_rec P) T T nil nil Q Ha H); intros.
+      specialize(typable_implies_wfC H5); intros.
+      apply tc_sub with (t := T); try easy.
+      apply H7. apply tc_mu; try easy.
+      destruct H5.
+      intros. specialize(H6 n). destruct H6.
+      inversion H6.
+      - subst. exists 0. constructor.
+      - subst. 
+        specialize(inj_substP H9 H); intros. subst. exists m. easy.
+  - inversion H0. subst. inversion H4. subst. clear H4. 
+    destruct H6 as (T,(Ha,(Hb,Hc))).
+    constructor; try easy.
+    constructor; try easy.
+    specialize(_a23_d (p_rec P) P T nil nil Hb (eq_refl (p_rec P))); intros.
+    destruct H4 as (T0,(Hd,He)).
+    specialize(_a21f P (p_rec P) T0 T0 nil nil Q); intros. exists T. split. easy.
+    split. specialize(typable_implies_wfC Hb); intros.
+    apply tc_sub with (t := T0); try easy. apply H4; try easy.
+    apply tc_mu; try easy.
+    intros. specialize(Hc n). destruct Hc. inversion H5.
+    - subst. exists 0. constructor.
+    - subst. specialize(inj_substP H7 H); intros. subst. exists m. easy.
+  - apply IHunfoldP2. apply IHunfoldP1. easy.
   - inversion H. subst. inversion H3. subst. clear H3.
     apply t_sess; try easy.
     - intros. specialize(H1 pt H3).
@@ -364,12 +188,124 @@ Proof.
     easy.
 
     constructor. easy. constructor; try easy.
+  - inversion H. subst. inversion H3. subst. clear H3. inversion H6. subst. clear H6.
+    constructor; try easy.
+    - intros. specialize(H1 pt H3). unfold InT in *. simpl in *.
+      apply in_or_app. specialize(in_or ((flattenT M ++ flattenT M')) (flattenT M'') pt H1); intros.
+      destruct H4. left. apply in_swap. easy. right. easy.
+    - simpl in *.
+      apply nodup_swap. specialize(nodup_swap ((flattenT M ++ flattenT M')) (flattenT M'') H2); intros.
+      apply nodup_swap2. easy.
+    - constructor. constructor. easy. easy. easy.
+  - inversion H. subst. inversion H3. subst. clear H3. inversion H6. subst. clear H6.
+    inversion H5. subst. clear H5.
+    constructor; try easy.
+    - intros. specialize(H1 pt H3).
+      unfold InT in *. simpl in *.
+      apply in_or_app.
+      specialize(in_or (((flattenT M ++ flattenT M') ++ flattenT M'')) (flattenT M''') pt H1); intros.
+      destruct H4.
+      - left.
+        specialize(app_assoc (flattenT M) (flattenT M') (flattenT M'')); intros.
+        replace (flattenT M ++ flattenT M' ++ flattenT M'') with ((flattenT M ++ flattenT M') ++ flattenT M'') in *.
+        easy.
+      - right. easy.
+    - simpl in *.
+      specialize(app_assoc (flattenT M) (flattenT M') (flattenT M'')); intros.
+      replace (flattenT M ++ flattenT M' ++ flattenT M'') with ((flattenT M ++ flattenT M') ++ flattenT M'') in *.
+      easy.
+    - constructor. constructor. easy. constructor. easy. easy. easy.
 Qed.
 
-(* Declare Instance Equivalence_pcong : Equivalence scongP. 
-Declare Instance Equivalence_scong : Equivalence scong.
 
-Inductive sForall (P: session -> Prop): session -> Prop :=
-  | fsind: forall p proc, sForall P (p <-- proc)
-  | fspar: forall (S R: session), P S -> P R -> sForall P (S ||| R).
- *)
+Inductive stepE : relation expr := 
+  | ec_succ  : forall e n, stepE e (e_val (vnat n)) -> stepE (e_succ e) (e_val (vnat (n+1)))
+  | ec_neg   : forall e n, stepE e (e_val (vint n)) -> stepE (e_neg e) (e_val (vint (-n)))
+  | ec_neg2  : forall e n, stepE e (e_val (vnat n)) -> stepE (e_neg e) (e_val (vint (-(Z.of_nat n)))) 
+  | ec_t_f   : forall e,   stepE e (e_val (vbool true)) -> stepE (e_not e) (e_val (vbool false))
+  | ec_f_t   : forall e,   stepE e (e_val (vbool false)) -> stepE (e_not e) (e_val (vbool true))
+  | ec_gt_t0 : forall e e' m n, Z.lt (Z.of_nat n) (Z.of_nat m) -> 
+                           stepE e (e_val (vnat m)) -> stepE e' (e_val (vnat n)) ->
+                           stepE (e_gt e e') (e_val (vbool true)) 
+  | ec_gt_t1 : forall e e' m n, Z.lt n (Z.of_nat m) -> 
+                           stepE e (e_val (vnat m)) -> stepE e' (e_val (vint n)) ->
+                           stepE (e_gt e e') (e_val (vbool true)) 
+  | ec_gt_t2 : forall e e' m n, Z.lt (Z.of_nat n) m -> 
+                           stepE e (e_val (vint m)) -> stepE e' (e_val (vnat n)) ->
+                           stepE (e_gt e e') (e_val (vbool true)) 
+  | ec_gt_t3 : forall e e' m n, Z.lt n m -> 
+                           stepE e (e_val (vint m)) -> stepE e' (e_val (vint n)) ->
+                           stepE (e_gt e e') (e_val (vbool true)) 
+  | ec_gt_f0 : forall e e' m n, Z.le (Z.of_nat m) (Z.of_nat n) -> 
+                           stepE e (e_val (vnat m)) -> stepE e' (e_val (vnat n)) ->
+                           stepE (e_gt e e') (e_val (vbool false)) 
+  | ec_gt_f1 : forall e e' m n, Z.le (Z.of_nat m) n -> 
+                           stepE e (e_val (vnat m)) -> stepE e' (e_val (vint n)) ->
+                           stepE (e_gt e e') (e_val (vbool false)) 
+  | ec_gt_f2 : forall e e' m n, Z.le m (Z.of_nat n) -> 
+                           stepE e (e_val (vint m)) -> stepE e' (e_val (vnat n)) ->
+                           stepE (e_gt e e') (e_val (vbool false)) 
+  | ec_gt_f3 : forall e e' m n, Z.le m n -> 
+                           stepE e (e_val (vint m)) -> stepE e' (e_val (vint n)) ->
+                           stepE (e_gt e e') (e_val (vbool false)) 
+  | ec_plus0 : forall e e' m n, stepE e (e_val (vnat n)) -> stepE e' (e_val (vnat m)) -> 
+                           stepE (e_plus e e') (e_val (vint ((Z.of_nat n) + (Z.of_nat m))))
+  | ec_plus1 : forall e e' m n, stepE e (e_val (vnat n)) -> stepE e' (e_val (vint m)) -> 
+                           stepE (e_plus e e') (e_val (vint ((Z.of_nat n) + m)))
+  | ec_plus2 : forall e e' m n, stepE e (e_val (vint n)) -> stepE e' (e_val (vnat m)) -> 
+                           stepE (e_plus e e') (e_val (vint (n + (Z.of_nat m))))
+  | ec_plus3 : forall e e' m n, stepE e (e_val (vint n)) -> stepE e' (e_val (vint m)) -> 
+                           stepE (e_plus e e') (e_val (vint (n + m)))
+  | ec_detl  : forall m n v, stepE m v -> stepE (e_det m n) v
+  | ec_detr  : forall m n v, stepE n v -> stepE (e_det m n) v
+  | ec_refl  : forall e, stepE e e
+  | ec_trans : forall e e' e'', stepE e e' -> stepE e' e'' -> stepE e e''.
+
+   
+Lemma expr_typ_step : forall Gs e e' S, typ_expr Gs e S -> stepE e e' -> typ_expr Gs e' S.
+Proof.
+  intros. revert H. revert S. induction H0; intros; try easy.
+  - specialize(inv_expr_succ Gs (e_succ e) S e H (eq_refl (e_succ e))); intros.
+    destruct H1. destruct H2; subst.
+    apply sc_valn.
+    apply sc_sub with (s := snat). apply sc_valn. apply sni.
+  - specialize(inv_expr_neg Gs (e_neg e) S e H (eq_refl (e_neg e))); intros.
+    destruct H1. subst. apply sc_vali.
+  - specialize(inv_expr_neg Gs (e_neg e) S e H (eq_refl (e_neg e))); intros.
+    destruct H1. subst. apply sc_vali.
+  - specialize(inv_expr_not Gs (e_not e) S e H (eq_refl (e_not e))); intros.
+    destruct H1. subst. apply sc_valb.
+  - specialize(inv_expr_not Gs (e_not e) S e H (eq_refl (e_not e))); intros.
+    destruct H1. subst. apply sc_valb.
+  - specialize(inv_expr_gt Gs (e_gt e e') S e e' H0 (eq_refl (e_gt e e'))); intros.
+    destruct H1. destruct H2. subst. apply sc_valb.
+  - specialize(inv_expr_gt Gs (e_gt e e') S e e' H0 (eq_refl (e_gt e e'))); intros.
+    destruct H1. destruct H2. subst. apply sc_valb.
+  - specialize(inv_expr_gt Gs (e_gt e e') S e e' H0 (eq_refl (e_gt e e'))); intros.
+    destruct H1. destruct H2. subst. apply sc_valb.
+  - specialize(inv_expr_gt Gs (e_gt e e') S e e' H0 (eq_refl (e_gt e e'))); intros.
+    destruct H1. destruct H2. subst. apply sc_valb.
+  - specialize(inv_expr_gt Gs (e_gt e e') S e e' H0 (eq_refl (e_gt e e'))); intros.
+    destruct H1. destruct H2. subst. apply sc_valb.
+  - specialize(inv_expr_gt Gs (e_gt e e') S e e' H0 (eq_refl (e_gt e e'))); intros.
+    destruct H1. destruct H2. subst. apply sc_valb.
+  - specialize(inv_expr_gt Gs (e_gt e e') S e e' H0 (eq_refl (e_gt e e'))); intros.
+    destruct H1. destruct H2. subst. apply sc_valb.
+  - specialize(inv_expr_gt Gs (e_gt e e') S e e' H0 (eq_refl (e_gt e e'))); intros.
+    destruct H1. destruct H2. subst. apply sc_valb.
+  - specialize(inv_expr_plus Gs (e_plus e e') S e e' H (eq_refl (e_plus e e'))); intros.
+    destruct H0. destruct H1. subst. apply sc_vali.
+  - specialize(inv_expr_plus Gs (e_plus e e') S e e' H (eq_refl (e_plus e e'))); intros.
+    destruct H0. destruct H1. subst. apply sc_vali.
+  - specialize(inv_expr_plus Gs (e_plus e e') S e e' H (eq_refl (e_plus e e'))); intros.
+    destruct H0. destruct H1. subst. apply sc_vali.
+  - specialize(inv_expr_plus Gs (e_plus e e') S e e' H (eq_refl (e_plus e e'))); intros.
+    destruct H0. destruct H1. subst. apply sc_vali.
+  - specialize(inv_expr_det Gs (e_det m n) S m n H (eq_refl (e_det m n))); intros.
+    destruct H1. destruct H1. destruct H2.
+    apply sc_sub with (s := x); intros; try easy. apply IHstepE; try easy.
+  - specialize(inv_expr_det Gs (e_det m n) S m n H (eq_refl (e_det m n))); intros.
+    destruct H1. destruct H1. destruct H2.
+    apply sc_sub with (s := x); intros; try easy. apply IHstepE; try easy.
+  - specialize(IHstepE1 S H). specialize(IHstepE2 S). apply IHstepE2; try easy.
+Qed.

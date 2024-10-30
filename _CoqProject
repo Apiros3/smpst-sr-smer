@@ -5,9 +5,13 @@ src/header.v
 type/local.v
 type/global.v
 type/isomorphism.v
+type/decidability.v
+type/global_tree_ctx.v
 type/merge.v
 type/projection.v
-type/proj_sub.v
+type/step.v
+type/proj_part.v
+type/wfgC_after_step.v
 process/processes.v
 process/typecheck.v
 process/inversion.v
@@ -16,3 +20,4 @@ process/substitution.v
 process/sessions.v
 process/beta.v
 process/subject_reduction.v
+process/progress.v

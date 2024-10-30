@@ -793,3 +793,53 @@ Proof.
   specialize(trivial_incr 0 0 Q); intros.
   replace (incr_free 0 0 0 0 Q) with Q. easy.
 Qed.
+
+Lemma inj_substP : forall [P' m n k P Q Q0], 
+    substitutionP m n k P P' Q -> 
+    substitutionP m n k P P' Q0 -> 
+    Q = Q0.
+Proof.
+  induction P' using process_ind_ref; intros.
+  - inversion H; try easy.
+    subst. 
+    inversion H0; try easy.
+    subst.
+    inversion H0; try easy.
+    subst.
+    inversion H0; try easy. subst.
+    specialize(triad_le m y H7 H9); intros. easy.
+    subst. inversion H0; try easy.
+    subst.
+    destruct m; try easy.
+    specialize(triad_le y m H7 H9); intros. easy.
+  - inversion H. subst. inversion H0. subst. easy.
+  - inversion H. subst.
+    inversion H0. subst.
+    specialize(IHP' m n k P Q' Q'0 H10 H11). subst. easy.
+  - inversion H0. subst. inversion H1. subst.
+    assert(ys = ys0).
+    {
+      clear H0 H1. revert H10 H9 H. revert m n k P ys ys0. clear pt.
+      induction llp; intros.
+      - destruct ys0; try easy. destruct ys; try easy.
+      - destruct ys0; try easy. destruct ys; try easy.
+        inversion H10. subst. clear H10. inversion H9. subst. clear H9.
+        inversion H. subst. clear H.
+        specialize(IHllp m n k P ys ys0 H5 H7 H6); intros. subst. clear H6 H7 H5.
+        destruct H3. 
+        - destruct H. subst. destruct H4. destruct H. subst. easy.
+          destruct H as (k1,(l1,Ha)). easy.
+        - destruct H as (k1,(l1,(Ha,(Hb,Hc)))). subst.
+          destruct H4; try easy. destruct H as (k2,(l2,(Hf,(Hd,He)))). inversion Hf. subst.
+          specialize(H2 m n (S k) P l1 l2 Hc He). subst. easy.
+    }
+    subst. easy.
+  - inversion H. subst. inversion H0. subst.
+    specialize(IHP'1 m n k P Q1 Q3 H9 H11); intros. subst. 
+    specialize(IHP'2 m n k P Q2 Q4 H10 H12); intros. subst. easy.
+  - inversion H. subst. inversion H0. subst.
+    specialize(IHP' (S m) (S n) k P Q' Q'0 H6 H7). subst. easy. 
+Qed.
+
+
+
