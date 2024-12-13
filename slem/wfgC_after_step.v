@@ -1,10 +1,9 @@
-From SST Require Export type.global type.local type.isomorphism type.projection type.merge type.step type.proj_part.
+From SST Require Export src.global src.local src.isomorphism src.projection src.merge src.step src.proj_part.
 Require Import List String Datatypes ZArith Relations PeanoNat. 
 Open Scope list_scope.
 From Paco Require Import paco pacotac.
 Require Import Setoid Morphisms Coq.Program.Basics.
 Require Import Coq.Init.Datatypes.
-
 
 Lemma proj_cont_pq_step : forall G G' p q l,
     wfgC G -> 

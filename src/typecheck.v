@@ -1,14 +1,12 @@
-From SST Require Import src.expressions process.processes type.global type.local type.isomorphism.
+From SST Require Import src.expressions.
 Require Import List String Datatypes ZArith Relations PeanoNat.
 Open Scope list_scope.
 From mathcomp Require Import ssreflect.seq.
 Import ListNotations.
 From Paco Require Import paco.
 
-
 Definition ctxS := list (option sort).
 Definition ctxT := list (option ltt).
-
 
 Inductive typ_expr: ctxS -> expr -> sort -> Prop :=
   | sc_var : forall c s t, Some t = onth s c -> typ_expr c (e_var s) t
@@ -32,8 +30,6 @@ Inductive typ_expr: ctxS -> expr -> sort -> Prop :=
                              typ_expr c (e_plus e1 e2) sint
   | sc_det  : forall c e1 e2 s, typ_expr c e1 s -> typ_expr c e2 s -> typ_expr c (e_det e1 e2) s.
 
-
-(*  depth *)
 Inductive typ_proc: ctxS -> ctxT -> process -> ltt -> Prop :=
   | tc_inact: forall cs ct,     typ_proc cs ct (p_inact) (ltt_end)
   | tc_var  : forall cs ct s t, Some t = onth s ct -> wfC t ->
@@ -88,23 +84,4 @@ Section typ_proc_ind_ref.
   Qed.
 
 End typ_proc_ind_ref.
-
-Lemma natb_to_prop : forall a b, (a =? b)%nat = true -> a = b.
-Proof. 
-    intros a b.
-    specialize(Nat.eqb_eq a b); intro H1.
-    destruct H1.
-    easy.
-Qed.
-
-Lemma natb_to_propf : forall a b, (a =? b)%nat = false -> a <> b.
-Proof.
-    intros a b.
-    specialize(Nat.eqb_neq a b); intro H1.
-    destruct H1.
-    easy.
-Qed.
-
-
-
 

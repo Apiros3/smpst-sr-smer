@@ -1,5 +1,5 @@
 From mathcomp Require Import all_ssreflect.
-From SST Require Import src.expressions type.global type.local type.isomorphism. 
+From SST Require Import src.expressions. 
 Require Import List String Datatypes ZArith Relations Setoid Morphisms.
 Open Scope list_scope.
 From mathcomp Require Import ssreflect.seq.
@@ -48,6 +48,7 @@ Section process_ind_ref.
     - apply (P_ite e p1 p2 (process_ind_ref p1) (process_ind_ref p2)).
     - apply (P_rec p (process_ind_ref p)). 
   Qed.
+  
 End process_ind_ref.
 
 Inductive wtyped : process -> Prop := 
@@ -57,26 +58,6 @@ Inductive wtyped : process -> Prop :=
   | wp_recv : forall pt llp, SList llp -> List.Forall (fun u => (u = None) \/ (exists k, u = Some k /\ wtyped k)) llp -> wtyped (p_recv pt llp)
   | wp_ite : forall e P1 P2, wtyped P1 -> wtyped P2 -> wtyped (p_ite e P1 P2)
   | wp_rec : forall pr, wtyped pr -> wtyped (p_rec pr).
-
-Lemma list_fst_snd_len {A B: Type} : forall (lis : list (A*B)), length (List.map fst lis) = length (List.map snd lis).
-Proof.
-  intros.
-  induction lis.
-  easy.
-  simpl. 
-  replace (length (List.map fst lis)) with (length (List.map snd lis)).
-  easy.
-Qed.
-
-Lemma unzip_zip {A B : Type} : forall (lis : list (A*B)), lis = zip (List.map fst lis) (List.map snd lis).
-Proof.
-  intros.
-  induction lis.
-  - easy.
-  - simpl. replace lis with (zip (List.map fst lis) (List.map snd lis)) at 1.
-    specialize(surjective_pairing a); intros. 
-    replace a with (a.1,a.2). easy.
-Qed.
 
 Fixpoint incr_freeE (fv m : fin) (e : expr) :=
   match e with
@@ -104,6 +85,8 @@ Fixpoint incr_free (fvP fvE m k : fin) (P : process) : process :=
     | p_rec P'         => p_rec (incr_free (S fvP) fvE m k P')
   end.
 
+End process.
+
 Section substitution.
 
 Definition subst_relation (A : Type) : Type := fin -> fin -> fin -> A -> A -> A -> Prop.
@@ -124,9 +107,4 @@ Inductive substitutionP : subst_relation process :=
   | sub_ite       : forall P x m n e P1 P2 Q1 Q2, substitutionP x m n P P1 Q1 -> substitutionP x m n P P2 Q2 -> substitutionP x m n P (p_ite e P1 P2) (p_ite e Q1 Q2)
   | sub_rec       : forall P x m n P' Q', substitutionP (S x) (S m) n P P' Q' -> substitutionP x m n P (p_rec P') (p_rec Q').
 
-
-
 End substitution.
-
-End process.
-

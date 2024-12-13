@@ -1,16 +1,9 @@
-From SST Require Export type.global type.local type.isomorphism.
+From SST Require Export type.global type.local type.isomorphism src.merge.
 Require Import List String Datatypes ZArith Relations PeanoNat.
 Open Scope list_scope.
 From Paco Require Import paco pacotac.
 Require Import Setoid Morphisms Coq.Program.Basics.
 Require Import Coq.Init.Datatypes.
-
-
-Inductive isMerge : ltt -> list (option ltt) -> Prop :=
-  | matm : forall t, isMerge t (Some t :: nil)
-  | mconsn : forall t xs, isMerge t xs -> isMerge t (None :: xs) 
-  | mconss : forall t xs, isMerge t xs -> isMerge t (Some t :: xs). 
-
 
 Lemma merge_end_back : forall n ys0 t,
     onth n ys0 = Some ltt_end -> 
@@ -36,28 +29,6 @@ Proof.
     inversion H0. subst. destruct H3; try easy. inversion H1; try easy.
     subst. specialize(IHx T). apply IHx; try easy.
     subst. specialize(IHx T). apply IHx; try easy.
-Qed.
-
-
-Lemma Iso_mon : monotone2 lttIso.
-Proof.
-  unfold monotone2; intros.
-  induction IN; intros; try easy.
-  - constructor.
-  - constructor. revert H. revert xs ys.
-    induction xs; intros; try easy. destruct ys; try easy.
-    destruct a. destruct p0. destruct o; try easy. destruct p0.
-    simpl in *. split. easy. split. apply LE; try easy.
-    apply IHxs; try easy.
-  - destruct o; try easy.
-    apply IHxs; try easy.
-  - constructor. revert H. revert xs ys.
-    induction xs; intros; try easy. destruct ys; try easy.
-    destruct a. destruct p0. destruct o; try easy. destruct p0.
-    simpl in *. split. easy. split. apply LE; try easy.
-    apply IHxs; try easy.
-  - destruct o; try easy.
-    apply IHxs; try easy.
 Qed.
 
 Lemma lttIso_inv : forall [r p xs q ys],

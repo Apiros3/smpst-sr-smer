@@ -7,7 +7,6 @@ Variant value: Type :=
   | vbool: bool -> value
   | vnat : nat -> value.
 
-
 Inductive sort: Type :=
   | sbool: sort
   | sint : sort
@@ -34,7 +33,6 @@ Inductive expr  : Type :=
   | e_gt : ( expr   ) -> ( expr   ) -> expr
   | e_plus: ( expr   ) -> ( expr   ) -> expr
   | e_det : expr -> expr -> expr.
-
 
 End expr.
 

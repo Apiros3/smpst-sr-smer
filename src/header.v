@@ -3,7 +3,10 @@ Require Import List String Coq.Arith.PeanoNat Relations.
 Import ListNotations. 
 
 Notation fin := nat.
+Notation part := string (only parsing).
+Notation label := nat (only parsing).
 
+(* reflexive transitive closure *)
 Inductive multi {X : Type} (R : relation X) : relation X :=
   | multi_refl : forall (x : X), multi R x x 
   | multi_step : forall (x y z : X), R x y -> multi R y z -> multi R x z.
@@ -18,6 +21,18 @@ Proof.
   apply H2 with (y := y). easy. easy.
 Qed.
 
+(* transitive closure *) 
+Inductive multiS {X : Type} (R : relation X) : relation X :=
+  | multi_sing : forall (x y : X), R x y -> multiS R x y
+  | multi_sstep : forall (x y z : X), R x y -> multiS R y z -> multiS R x z.
+
+Inductive Forall2R {X Y} (P : X -> Y -> Prop) : list X -> list Y -> Prop := 
+  | Forall2R_nil : forall ys, Forall2R P nil ys
+  | Forall2R_cons : forall x xs y ys, P x y -> Forall2R P xs ys -> Forall2R P (x :: xs) (y :: ys).
+
+Inductive Forall3 {A B C} : (A -> B -> C -> Prop) -> list A -> list B -> list C -> Prop := 
+  | Forall3_nil : forall P, Forall3 P nil nil nil
+  | Forall3_cons : forall P a b c xa xb xc, P a b c -> Forall3 P xa xb xc -> Forall3 P (a :: xa) (b :: xb) (c :: xc).
 
 Inductive Forall3S {A} : (A -> A -> A -> Prop) -> list A -> list A -> list A -> Prop := 
   | Forall3s_nil0 : forall P xs, Forall3S P nil xs xs
@@ -49,38 +64,6 @@ Fixpoint extendLis {A} (n : fin) (ST : option A) : list (option A) :=
     | S m  => None :: extendLis m ST
     | 0    => [ST]
   end.
-
-Definition Forall2_mono {X Y} {R T : X -> Y -> Prop} (HRT : forall x y, R x y -> T x y) :
-      forall l m, Forall2 R l m -> Forall2 T l m :=
-  fix loop l m h {struct h} :=
-    match h with
-    | Forall2_nil => Forall2_nil T
-    | Forall2_cons _ _ _ _ h1 h2 => Forall2_cons _ _ (HRT _ _ h1) (loop _ _ h2)
-    end.
-
-Definition Forall_mono {X} {R T : X -> Prop} (HRT : forall x, R x -> T x) :
-      forall l, Forall R l -> Forall T l.
-Proof.
-  induction l; intros; try easy.
-  inversion H. subst. specialize(IHl H3). constructor; try easy.
-  apply HRT; try easy.
-Qed.
-
-Inductive Forall2R {X Y} (P : X -> Y -> Prop) : list X -> list Y -> Prop := 
-  | Forall2R_nil : forall ys, Forall2R P nil ys
-  | Forall2R_cons : forall x xs y ys, P x y -> Forall2R P xs ys -> Forall2R P (x :: xs) (y :: ys).
-
-Definition Forall2R_mono {X Y} {R T : X -> Y -> Prop} (HRT : forall x y, R x y -> T x y) :
-      forall l m, Forall2R R l m -> Forall2R T l m :=
-  fix loop l m h {struct h} :=
-    match h with
-    | Forall2R_nil xs => Forall2R_nil T xs
-    | Forall2R_cons _ _ _ _ h1 h2 => Forall2R_cons _ _ _ _ _ (HRT _ _ h1) (loop _ _ h2)
-    end.
-
-Inductive multiS {X : Type} (R : relation X) : relation X :=
-  | multi_sing : forall (x y : X), R x y -> multiS R x y
-  | multi_sstep : forall (x y z : X), R x y -> multiS R y z -> multiS R x z.
   
 Fixpoint onth {A : Type} (n : fin) (lis : list (option A)) : option A :=
   match n with 
@@ -151,7 +134,6 @@ Proof.
   induction t'; intros; try easy.
 Qed.
 
-
 Fixpoint overwrite_lis {A} (n : fin) (x : (option A)) (xs : list (option A)) : list (option A) := 
   match xs with 
     | y::xs => match n with 
@@ -187,16 +169,23 @@ Proof.
   apply IHm; try easy.
 Qed.
 
-Inductive Forall3 {A B C} : (A -> B -> C -> Prop) -> list A -> list B -> list C -> Prop := 
-  | Forall3_nil : forall P, Forall3 P nil nil nil
-  | Forall3_cons : forall P a b c xa xb xc, P a b c -> Forall3 P xa xb xc -> Forall3 P (a :: xa) (b :: xb) (c :: xc).
-
 Fixpoint noneLis {A} (n : fin) : list (option A) := 
   match n with 
     | 0 => nil 
     | S m => None :: noneLis m
   end.
 
+Lemma Forall_prop {A} : forall l (xs : list (option A)) p P, 
+      onth l xs = Some p ->
+      Forall P xs -> 
+      P (Some p).
+Proof.
+  intros.
+  specialize(Forall_forall P xs); intros.
+  destruct H1. specialize(H1 H0). 
+  clear H2. specialize(some_onth_implies_In l xs p H); intros.
+  specialize(H1 (Some p) H2); intros. easy.
+Qed.
 
 Lemma Forall2_prop_r {A B} : forall l (xs : list (option A)) (ys : list (option B)) p P,
       onth l xs = Some p ->
@@ -230,14 +219,18 @@ Proof.
     specialize(IHl xs l' p P). apply IHl; try easy.
 Qed.
 
-Lemma Forall_prop {A} : forall l (xs : list (option A)) p P, 
-      onth l xs = Some p ->
-      Forall P xs -> 
-      P (Some p).
+Lemma natb_to_prop : forall a b, (a =? b)%nat = true -> a = b.
+Proof. 
+    intros a b.
+    specialize(Nat.eqb_eq a b); intro H1.
+    destruct H1.
+    easy.
+Qed.
+
+Lemma natb_to_propf : forall a b, (a =? b)%nat = false -> a <> b.
 Proof.
-  intros.
-  specialize(Forall_forall P xs); intros.
-  destruct H1. specialize(H1 H0). 
-  clear H2. specialize(some_onth_implies_In l xs p H); intros.
-  specialize(H1 (Some p) H2); intros. easy.
+    intros a b.
+    specialize(Nat.eqb_neq a b); intro H1.
+    destruct H1.
+    easy.
 Qed.

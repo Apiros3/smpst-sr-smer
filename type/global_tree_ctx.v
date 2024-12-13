@@ -165,8 +165,6 @@ Inductive isMergeCtx : list (option gtt) -> list (option (list (option gtt))) ->
       ) t t' t'' ->
       isMergeCtx t xs -> isMergeCtx t'' (Some t' :: xs). 
 
-
-
 Inductive usedCtx : (list (option gtt)) -> gtth -> Prop := 
   | used_hol : forall n G, usedCtx (extendLis n (Some G)) (gtth_hol n)
   | used_con : forall ctxG ctxGLis p q ys, isMergeCtx ctxG ctxGLis -> 
