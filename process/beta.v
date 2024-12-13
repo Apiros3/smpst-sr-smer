@@ -1,4 +1,4 @@
-From SST Require Export src.expressions process.processes process.sessions process.substitution.
+From SST Require Export src.expressions process.processes process.sessions process.substitution process.substitution_helper.
 Require Import List String Relations ZArith.
 Require Import Setoid Morphisms Coq.Program.Basics.
 Import ListNotations.
@@ -268,22 +268,22 @@ Lemma _a24_helper : forall v d P Gsl Gsr Gt S T,
 Proof.
   intros v d P. revert v d.
   induction P using process_ind_ref; intros; try easy.
-  - specialize(_a23_e (p_var n) n T (Gsl ++ Some S :: Gsr) Gt H (eq_refl (p_var n))); intros.
+  - specialize(inv_proc_var (p_var n) n T (Gsl ++ Some S :: Gsr) Gt H (eq_refl (p_var n))); intros.
     destruct H1. destruct H1. destruct H2.
     simpl. apply tc_sub with (t := x); intros; try easy.
     constructor; try easy.
     specialize(typable_implies_wfC H); easy.
-  - specialize(_a23_f p_inact T (Gsl ++ Some S :: Gsr) Gt H (eq_refl (p_inact))); intros.
+  - specialize(inv_proc_inact p_inact T (Gsl ++ Some S :: Gsr) Gt H (eq_refl (p_inact))); intros.
     subst. simpl. constructor.
   - simpl.
-    specialize(_a23_bf pt lb ex P (p_send pt lb ex P) (Gsl ++ Some S :: Gsr) Gt T H (eq_refl (p_send pt lb ex P))); intros.
+    specialize(inv_proc_send pt lb ex P (p_send pt lb ex P) (Gsl ++ Some S :: Gsr) Gt T H (eq_refl (p_send pt lb ex P))); intros.
     destruct H1. destruct H1. destruct H1. destruct H2. 
     apply tc_sub with (t := (ltt_send pt (extendLis lb (Some (x, x0))))); intros; try easy.
     constructor; try easy.
     apply expr_subst with (S := S); try easy.
     apply IHP with (S := S); try easy.
     specialize(typable_implies_wfC H); try easy.
-  - specialize(_a23_a pt llp (p_recv pt llp) (Gsl ++ Some S :: Gsr) Gt T H0 (eq_refl (p_recv pt llp))); intros.
+  - specialize(inv_proc_recv pt llp (p_recv pt llp) (Gsl ++ Some S :: Gsr) Gt T H0 (eq_refl (p_recv pt llp))); intros.
     destruct H2. destruct H2. destruct H3. destruct H4.
     apply tc_sub with (t := ltt_recv pt x); intros; try easy. 
     constructor; try easy.
@@ -292,7 +292,7 @@ Proof.
     apply SList_map_a24; try easy.
     apply _a24_helper_recv with (S := S); try easy.
     specialize(typable_implies_wfC H0); try easy.
-  - specialize(_a23_c (p_ite e P1 P2) e P1 P2 T (Gsl ++ Some S :: Gsr) Gt H (eq_refl (p_ite e P1 P2))); intros.
+  - specialize(inv_proc_ite (p_ite e P1 P2) e P1 P2 T (Gsl ++ Some S :: Gsr) Gt H (eq_refl (p_ite e P1 P2))); intros.
     destruct H1. destruct H1. destruct H1. destruct H2. destruct H3. destruct H4.
     specialize(typable_implies_wfC H); intros.
     constructor.
@@ -301,7 +301,7 @@ Proof.
     apply tc_sub with (t := x); try easy.
     apply IHP2 with (S := S); try easy.
     apply tc_sub with (t := x0); try easy.
-  - specialize(_a23_d (p_rec P) P T (Gsl ++ Some S :: Gsr) Gt H (eq_refl (p_rec P))); intros.
+  - specialize(inv_proc_rec (p_rec P) P T (Gsl ++ Some S :: Gsr) Gt H (eq_refl (p_rec P))); intros.
     destruct H1. destruct H1.
     apply tc_sub with (t := x); try easy.
     simpl in *. constructor. apply IHP with (S := S); try easy.

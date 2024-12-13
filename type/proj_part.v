@@ -2028,7 +2028,7 @@ Proof.
 Qed.
 
 
-Lemma _3_19_3_helper : forall G G' p q s l L1 L2 LS LT LS' LT' T,
+Lemma _3_19_3_helper : forall G G' p q s l L1 L2 LS LT LS' LT' T, 
       wfgC G ->
       wfgC G' ->
       projectionC G p (ltt_send q L1) ->

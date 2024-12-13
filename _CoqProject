@@ -14,10 +14,15 @@ type/proj_part.v
 type/wfgC_after_step.v
 process/processes.v
 process/typecheck.v
+process/inversion_helper.v
 process/inversion.v
 process/inversion_expr.v
+process/substitution_helper.v
 process/substitution.v
+process/sessions_helper.v
 process/sessions.v
 process/beta.v
+process/subject_reduction_helper.v
 process/subject_reduction.v
+process/progress_helper.v
 process/progress.v

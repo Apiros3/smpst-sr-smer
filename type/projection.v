@@ -1720,17 +1720,3 @@ Proof.
       specialize(IHn SI T' S' T S PT QT). apply IHn; try easy.
 Qed.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
