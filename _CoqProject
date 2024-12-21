@@ -1,6 +1,22 @@
 -R . SST
 
-process/sessions.v
-process/beta.v
-process/subject_reduction.v
-process/progress.v
+src/sim.v
+src/header.v
+src/expr.v
+src/process.v
+src/local.v
+src/global.v
+src/gttreeh.v
+src/part.v 
+src/balanced.v
+src/typecheck.v 
+src/step.v
+lemma/inversion.v
+lemma/inversion_expr.v
+lemma/substitution_helper.v
+lemma/substitution.v
+lemma/decidable_helper.v
+lemma/decidable.v
+lemma/expr.v
+lemma/part.v
+lemma/step.v
