@@ -11,6 +11,9 @@ src/part.v
 src/balanced.v
 src/typecheck.v 
 src/step.v
+src/merge.v
+src/projection.v
+src/session.v
 lemma/inversion.v
 lemma/inversion_expr.v
 lemma/substitution_helper.v
@@ -20,3 +23,7 @@ lemma/decidable.v
 lemma/expr.v
 lemma/part.v
 lemma/step.v
+lemma/projection_helper.v
+lemma/projection.v
+lemma/main_helper.v
+lemma/main.v

@@ -116,6 +116,7 @@ Inductive guardL : fin -> fin -> local -> Prop :=
   | gl_recv : forall n m p lis, List.Forall (fun u => u = None \/ (exists s g, u = Some(s, g) /\ guardL n m g)) lis -> guardL (S n) m (l_recv p lis)
   | gl_rec  : forall n m g Q, subst_local 0 0 (l_rec g) g Q -> guardL n m Q -> guardL n (S m) (l_rec g).
 
+
 Lemma guardL_more : forall n m k T, guardL n m T -> m <= k -> guardL n k T.
 Proof.
   induction n; intros; try easy.
@@ -202,6 +203,33 @@ Inductive subtype (R: ltt -> ltt -> Prop): ltt -> ltt -> Prop :=
                      subtype R (ltt_send p xs) (ltt_send p ys).
 
 Definition subtypeC l1 l2 := paco2 subtype bot2 l1 l2.
+
+Lemma sub_mon : monotone2 subtype.
+Proof.
+  unfold monotone2.
+  intros.
+  induction IN; intros.
+  - constructor.
+  - constructor.
+    revert H. revert xs. induction ys; intros. constructor.
+    destruct xs; try easy.
+    simpl in *.
+    - destruct a. destruct p0. destruct o; try easy.
+      destruct p0. destruct H as (Ha,(Hb,Hc)). split. easy.
+      split. apply LE. easy. apply IHys; try easy.
+    - destruct o. destruct p0. apply IHys; try easy. 
+      apply IHys; try easy.
+  - constructor.
+    revert H. revert ys.
+    induction xs; intros.
+    - constructor.
+      destruct ys; try easy.
+      simpl in *.
+      destruct a. destruct p0. destruct o; try easy.
+      destruct p0. destruct H as (Ha,(Hb,Hc)). split. easy. split. apply LE. easy.
+      apply IHxs. easy.
+      destruct o. destruct p0. apply IHxs. easy. apply IHxs. easy.
+Qed.
 
 Lemma refl_recv: forall (l1:  list (option(sort*ltt))) (R1: sort -> sort -> Prop) (R2: ltt -> ltt -> Prop),
    Reflexive R1 -> Reflexive R2 ->
