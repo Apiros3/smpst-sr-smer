@@ -63,7 +63,7 @@ Proof.
     specialize(sub_red_helper_2 H15 H22); intros. 
     constructor. constructor.
     - constructor.
-      specialize(typ_after_step_2_helper q p l G G' LP LQ SL' TL SL' TL'); intros.
+      specialize(typ_after_step_12_helper q p l G G' LP LQ SL' TL SL' TL'); intros.
       assert(projectionC G' p TL'). apply H26; try easy. clear H26. 
       exists TL'. split; try easy.
       split.
@@ -77,7 +77,7 @@ Proof.
       - specialize(guardP_cont_recv_n l xs y q Htt H); intros.
         specialize(guardP_subst_expr y (e_val v) 0 0); intros. apply H28; try easy.
     - constructor.
-      specialize(typ_after_step_1_helper q p l G G' LP LQ SL' TL SL' TL'); intros.
+      specialize(typ_after_step_12_helper q p l G G' LP LQ SL' TL SL' TL'); intros.
       assert(projectionC G' q TL). apply H26; try easy. clear H26.
       exists TL. split; try easy. split.
       - apply tc_sub with (t := LT); try easy.
@@ -169,7 +169,7 @@ Proof.
     specialize(sub_red_helper_1 H23 H6 Hh); intros.
     specialize(sub_red_helper_2 Hm H22); intros. 
     constructor. constructor.
-    - specialize(typ_after_step_2_helper q p l G G' LP LQ SL TL SL' TL'); intros.
+    - specialize(typ_after_step_12_helper q p l G G' LP LQ SL TL SL' TL'); intros.
       assert(projectionC G' p TL'). apply H15; try easy. clear H15. 
       exists TL'. split; try easy.
       split.
@@ -185,7 +185,7 @@ Proof.
       - specialize(guardP_cont_recv_n l xs y q Hc H); intros.
         specialize(guardP_subst_expr y (e_val v) 0 0); intros. apply H17; try easy.
     - constructor.
-      specialize(typ_after_step_1_helper q p l G G' LP LQ SL TL SL' TL'); intros.
+      specialize(typ_after_step_12_helper q p l G G' LP LQ SL TL SL' TL'); intros.
       assert(projectionC G' q TL). apply H15; try easy. clear H15.
       exists TL. split; try easy. split.
       - apply tc_sub with (t := T'); try easy.
