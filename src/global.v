@@ -1,15 +1,13 @@
 From mathcomp Require Import ssreflect.seq all_ssreflect.
-From Paco Require Import paco pacotac.
-From SST Require Export src.expressions src.header.
-Require Import List String Coq.Arith.PeanoNat Relations. 
+Require Import List String Coq.Arith.PeanoNat Relations ZArith Datatypes Setoid Morphisms Coq.Logic.Decidable Coq.Program.Basics Coq.Init.Datatypes Coq.Logic.Classical_Prop.
 Import ListNotations. 
-
-Notation part := string (only parsing).
-Notation label := nat (only parsing).
+Open Scope list_scope.
+From Paco Require Import paco.
+Import ListNotations. 
+From SST Require Import src.header src.sim src.expr.
 
 Section gtt.
 
-(* global session trees *)
 CoInductive gtt: Type :=
   | gtt_end    : gtt
   | gtt_send   : part -> part -> list (option (sort*gtt)) -> gtt.
@@ -22,7 +20,6 @@ Definition gtt_id (s: gtt): gtt :=
 
 Lemma gtt_eq: forall s, s = gtt_id s.
 Proof. intro s; destruct s; easy. Defined.
-
 
 Inductive global  : Type :=
   | g_var : fin -> global 
@@ -78,7 +75,7 @@ Inductive subst_global : fin -> fin -> global -> global -> global -> Prop :=
 
 
 Inductive betaG : relation global := 
-  | lttS : forall G G', subst_global 0 0 (g_rec G) G G' -> betaG (g_rec G) G'.
+  | gttS : forall G G', subst_global 0 0 (g_rec G) G G' -> betaG (g_rec G) G'.
 
 Inductive gttT (R : global -> gtt -> Prop) : global -> gtt -> Prop := 
   | gttT_end  : gttT R g_end gtt_end
@@ -417,12 +414,14 @@ Proof.
   apply gttT_mon.
 Qed.
 
+Lemma guardG_xs : forall [x s s' o],
+    (forall n : fin, exists m : fin, guardG n m (g_send s s' (o :: x))) ->
+    (forall n : fin, exists m : fin, guardG n m (g_send s s' x)). 
+Proof.
+  intros.
+  specialize(H n). destruct H. exists x0.
+  inversion H. constructor. subst.
+  constructor. inversion H3; try easy.
+Qed.
+
 End gtt.
-
-
-
-
-
-
-
-

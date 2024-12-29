@@ -1,8 +1,10 @@
 From mathcomp Require Import ssreflect.seq all_ssreflect.
-From Paco Require Import paco pacotac.
-From SST Require Export src.expressions src.header type.global.
-Require Import List String Coq.Arith.PeanoNat Morphisms Relations.
+Require Import List String Coq.Arith.PeanoNat Relations ZArith Datatypes Setoid Morphisms Coq.Logic.Decidable Coq.Program.Basics Coq.Init.Datatypes Coq.Logic.Classical_Prop.
 Import ListNotations. 
+Open Scope list_scope.
+From Paco Require Import paco.
+Import ListNotations. 
+From SST Require Import src.header src.sim src.expr.
 
 Section ltt.
 
@@ -53,8 +55,8 @@ Section local_ind_ref.
       left. easy.
     - apply P_rec; easy.
   Qed.
+  
 End local_ind_ref.
-
 
 Fixpoint incr_freeL (fv m : fin) (T : local) := 
   match T with 
@@ -202,6 +204,32 @@ Inductive subtype (R: ltt -> ltt -> Prop): ltt -> ltt -> Prop :=
 
 Definition subtypeC l1 l2 := paco2 subtype bot2 l1 l2.
 
+Lemma sub_mon : monotone2 subtype.
+Proof.
+  unfold monotone2.
+  intros.
+  induction IN; intros.
+  - constructor.
+  - constructor.
+    revert H. revert xs. induction ys; intros. constructor.
+    destruct xs; try easy.
+    simpl in *.
+    - destruct a. destruct p0. destruct o; try easy.
+      destruct p0. destruct H as (Ha,(Hb,Hc)). split. easy.
+      split. apply LE. easy. apply IHys; try easy.
+    - destruct o. destruct p0. apply IHys; try easy. 
+      apply IHys; try easy.
+  - constructor.
+    revert H. revert ys.
+    induction xs; intros.
+    - constructor.
+      destruct ys; try easy.
+      simpl in *.
+      destruct a. destruct p0. destruct o; try easy.
+      destruct p0. destruct H as (Ha,(Hb,Hc)). split. easy. split. apply LE. easy.
+      apply IHxs. easy.
+      destruct o. destruct p0. apply IHxs. easy. apply IHxs. easy.
+Qed.
 
 Lemma refl_recv: forall (l1:  list (option(sort*ltt))) (R1: sort -> sort -> Prop) (R2: ltt -> ltt -> Prop),
    Reflexive R1 -> Reflexive R2 ->
@@ -254,7 +282,6 @@ Proof. pcofix CIH.
        right. apply CIH.
 Qed.
 
-
 Lemma subtype_monotone : monotone2 subtype.
 Proof.
   unfold monotone2.
@@ -275,7 +302,6 @@ Proof.
     destruct H. destruct H0. split; try easy. split. apply LE; try easy. apply IHxs; try easy.
     destruct o; try easy. destruct p0. apply IHxs; try easy. apply IHxs; try easy.
 Qed.
-
 
 Lemma subtype_end : forall H, subtypeC ltt_end H -> H = ltt_end.
 Proof.
@@ -483,8 +509,6 @@ Lemma stTrans: forall l1 l2 l3, subtypeC l1 l2 -> subtypeC l2 l3 -> subtypeC l1 
       apply stTrans_helper_send with (x := x); try easy.
 Qed.
 
-
-
 Lemma lttT_mon : monotone2 lttT.
 Proof.
   unfold monotone2. intros. induction IN; intros; try easy.
@@ -516,7 +540,6 @@ Proof.
   - apply lttT_rec with (Q := Q); try easy.
 
 Qed.
-
 
 Lemma subst_injL : forall m n G G1 Q Q0, subst_local m n G G1 Q0 -> subst_local m n G G1 Q -> Q = Q0.
 Proof.
@@ -730,7 +753,6 @@ Proof.
     constructor; try easy. apply IHG1; try easy.
 Qed.
         
-  
 Lemma wfL_after_subst : forall Q G1 G2 m n,
     wfL G1 -> wfL G2 -> subst_local m n G1 G2 Q -> wfL Q.
 Proof.
@@ -892,11 +914,4 @@ Proof.
     specialize(subst_injL 0 0 (l_rec G) G y Q H4 H2); intros. subst. easy.
 Qed.
 
-
-
-
 End ltt.
-
-
-
-

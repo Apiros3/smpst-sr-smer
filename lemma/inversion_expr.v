@@ -1,10 +1,10 @@
-From mathcomp Require Import all_ssreflect.
-From SST Require Import src.expressions process.processes process.typecheck process.inversion type.global type.local type.isomorphism.
-Require Import List String Datatypes ZArith Relations PeanoNat.
+From mathcomp Require Import ssreflect.seq all_ssreflect.
+Require Import List String Coq.Arith.PeanoNat Relations ZArith Datatypes Setoid Morphisms Coq.Logic.Decidable Coq.Program.Basics Coq.Init.Datatypes Coq.Logic.Classical_Prop.
+Import ListNotations. 
 Open Scope list_scope.
-From mathcomp Require Import ssreflect.seq.
-Import ListNotations.
 From Paco Require Import paco.
+Import ListNotations. 
+From SST Require Import src.header src.sim src.expr src.process src.local src.global src.balanced src.typecheck.
 
 Lemma inv_expr_var : forall ex n Gs S,
   typ_expr Gs ex S -> ex = (e_var n) -> 
@@ -98,11 +98,3 @@ Proof.
   exists s. inversion H0. subst. split; try easy. split. easy.
   apply srefl.
 Qed.
-
-
-
-
-
-
-
-

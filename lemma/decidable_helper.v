@@ -1,18 +1,11 @@
 From mathcomp Require Import ssreflect.seq all_ssreflect.
-From Paco Require Import paco pacotac.
-From SST Require Export src.expressions src.header type.global type.local type.isomorphism.
-Require Import List String Coq.Arith.PeanoNat Relations Coq.Logic.Decidable.
+Require Import List String Coq.Arith.PeanoNat Relations ZArith Datatypes Setoid Morphisms Coq.Logic.Decidable Coq.Program.Basics Coq.Init.Datatypes Coq.Logic.Classical_Prop.
 Import ListNotations. 
-
-Inductive isgParts : part -> global -> Prop := 
-  | pa_sendp : forall p q l, isgParts p (g_send p q l)
-  | pa_sendq : forall p q l, isgParts q (g_send p q l)
-  | pa_mu    : forall p g,   isgParts p g -> isgParts p (g_rec g)
-  | pa_sendr : forall p q r n s g lis, p <> r -> q <> r -> onth n lis = Some (s, g) -> isgParts r g -> isgParts r (g_send p q lis).
-  
-Definition isgPartsC (pt : part) (G : gtt) : Prop := 
-    exists G', gttTC G' G /\ (forall n, exists m, guardG n m G') /\ isgParts pt G'.
-
+Open Scope list_scope.
+From Paco Require Import paco.
+Import ListNotations. 
+From SST Require Import src.header src.sim src.expr src.process src.local src.global src.balanced src.typecheck src.part src.gttreeh.
+From SST Require Import lemma.inversion lemma.inversion_expr lemma.substitution_helper lemma.substitution.
 
 Lemma triv_pt_p : forall p q x0,
     wfgC (gtt_send p q x0) -> 
@@ -44,7 +37,6 @@ Proof.
     apply gttT_mon.
 Qed.
 
-
 Lemma triv_pt_q : forall p q x0,
     wfgC (gtt_send p q x0) -> 
     isgPartsC q (gtt_send p q x0).
@@ -75,7 +67,6 @@ Proof.
     apply gttT_mon.
 Qed.
 
-
 Lemma triv_pt_p_s : forall p q x0,
     wfgCw (gtt_send p q x0) -> 
     isgPartsC p (gtt_send p q x0).
@@ -105,7 +96,6 @@ Proof.
     apply gttT_mon.
     apply gttT_mon.
 Qed.
-
 
 Lemma triv_pt_q_s : forall p q x0,
     wfgCw (gtt_send p q x0) -> 
@@ -147,7 +137,6 @@ Proof.
   subst. apply pa_sendr with (n := Nat.succ n) (s := s0) (g := g); try easy.
 Qed.
 
-
 Lemma isgParts_x : forall [s s' x s0 g p],
     isgParts p g -> 
     isgParts p (g_send s s' (Some (s0, g) :: x)).
@@ -161,13 +150,6 @@ Proof.
       assert (p <> s'). apply eqb_neq; try easy.
       apply pa_sendr with (n := 0) (s := s0) (g := g); try easy.
 Qed.
-
-Inductive isgParts_depth : fin -> part -> global -> Prop := 
-  | dpth_p : forall p q lis, isgParts_depth 0 p (g_send p q lis)
-  | dpth_q : forall p q lis, isgParts_depth 0 q (g_send p q lis)
-  | dpth_mu : forall n pt g, isgParts_depth n pt g -> isgParts_depth (S n) pt (g_rec g)
-  | dpth_c : forall p q pt s g lis n k, p <> pt -> q <> pt -> onth k lis = Some(s, g) -> isgParts_depth n pt g -> isgParts_depth (S n) pt (g_send p q lis).
-
 
 Lemma isgParts_depth_exists : forall r Gl,
     isgParts r Gl -> exists n, isgParts_depth n r Gl.
@@ -269,7 +251,6 @@ Proof.
   - subst. inversion H0. subst.
     constructor. specialize(IHQ m.+1 n.+1 n0 r g P). apply IHQ; try easy.
 Qed.
-
 
 Lemma part_after_step_helper : forall G1 q p x0,
     gttTC G1 (gtt_send q p x0) -> 
@@ -392,47 +373,6 @@ Proof.
 Qed.
 
 
-Lemma decidable_isgParts : forall G pt, decidable (isgParts pt G).
-Proof.
-  induction G using global_ind_ref; intros.
-  - unfold decidable. right. easy.
-  - unfold decidable. right. easy.
-  - revert H. induction lis; intros; try easy.
-    unfold decidable.
-    - case_eq (eqb pt p); intros.
-      assert (pt = p). apply eqb_eq; try easy. subst. left. constructor.
-    - case_eq (eqb pt q); intros.
-      assert (pt = q). apply eqb_eq; try easy. subst. left. constructor.
-    - assert (pt <> p). apply eqb_neq; try easy. 
-      assert (pt <> q). apply eqb_neq; try easy.
-      right. unfold not. intros. inversion H4; try easy. subst. destruct n; try easy.
-    inversion H. subst. specialize(IHlis H3). clear H3 H.
-    unfold decidable in *.
-    destruct IHlis. left. 
-    - inversion H. subst. constructor. constructor. subst.
-      apply pa_sendr with (n := S n) (s := s) (g := g); try easy.
-    - unfold not in *. 
-      destruct H2. subst. right. intros. apply H. inversion H0; try easy.
-      constructor. constructor. subst.
-      destruct n; try easy.
-      apply pa_sendr with (n := n) (s := s) (g := g); try easy. 
-    - destruct H0 as (s,(g,(Ha,Hb))). subst.
-    - case_eq (eqb pt p); intros.
-      assert (pt = p). apply eqb_eq; try easy. subst. left. constructor.
-    - case_eq (eqb pt q); intros.
-      assert (pt = q). apply eqb_eq; try easy. subst. left. constructor.
-    - assert (pt <> p). apply eqb_neq; try easy. 
-      assert (pt <> q). apply eqb_neq; try easy.
-    - specialize(Hb pt). destruct Hb. left. 
-      apply pa_sendr with (n := 0) (s := s) (g := g); try easy.
-      right. intros. inversion H5; try easy. subst. 
-      destruct n. simpl in H12. inversion H12. subst. apply H4. easy.
-      apply H.
-      apply pa_sendr with (n := n) (s := s0) (g := g0); try easy.
-  - unfold decidable. specialize(IHG pt). destruct IHG. left. constructor. easy.
-    right. unfold not in *. intros. apply H. inversion H0; try easy.
-Qed.
-
 Lemma part_betaG : forall G G' pt, multiS betaG G G' -> isgParts pt G -> isgParts pt G'.
 Proof.
   intros.
@@ -530,7 +470,6 @@ Proof.
         destruct IHG2. left. easy. right. constructor. easy.
 Qed.
 
-
 Lemma part_betaG_b : forall G G' pt, multiS betaG G G' -> isgParts pt G' -> isgParts pt G.
 Proof.
   intros.
@@ -610,111 +549,541 @@ Proof.
     specialize(IHk lis s g ys xs). apply IHk; try easy.
 Qed.
 
-Lemma decidable_isgPartsC_s : forall G pt, wfgCw G -> decidable (isgPartsC pt G).
+
+Lemma ishParts_x : forall [p s1 s2 o1 o2 xs0],
+    (ishParts p (gtth_send s1 s2 (Some (o1,o2) :: xs0)) -> False) ->
+    (ishParts p o2 -> False).
 Proof.
-  intros. unfold decidable. pose proof H as Ht.
-  unfold wfgCw in H.
-  destruct H as (G',(Ha,(Hb,Hc))). 
-  specialize(decidable_isgParts G' pt); intros. unfold decidable in H.
-  destruct H. left. unfold isgPartsC. exists G'. easy.
-  right. unfold not in *. intros. apply H.
-  clear H Ht.
-  unfold isgPartsC in H0. destruct H0 as (Gl,(He,(Hf,Hg))).
-  specialize(isgParts_depth_exists pt Gl Hg); intros. destruct H as (n, H). clear Hg.
-  clear Hb. revert Ha Hc He Hf H.
-  revert G pt G' Gl.
-  induction n; intros.
-  - inversion H. subst. pinversion He; try easy. subst.
-    - pinversion Ha. subst. constructor. subst. clear H0 H1.
-      specialize(guard_breakG G Hc); intros. 
-      destruct H0 as (T,(Hta,(Htb,Htc))).
-      specialize(gttTC_after_subst (g_rec G) T (gtt_send pt q ys)); intros.
-    - assert(gttTC T (gtt_send pt q ys)). apply H0; try easy. pfold. easy. clear H0.
-      specialize(part_betaG_b (g_rec G) T pt); intros. apply H0; try easy.
-      destruct Htc. subst. pinversion H1; try easy. apply gttT_mon.
-      destruct H2 as (p1,(q1,(lis1,Hl))). subst. pinversion H1; try easy. subst.
-      constructor.
-      apply gttT_mon. apply gttT_mon. apply gttT_mon.
-    - subst. 
-      pinversion He; try easy. subst.
-      pinversion Ha. subst. constructor.
-      subst. clear H0 H1.
-      specialize(guard_breakG G Hc); intros.
-      destruct H0 as (T1,(Hta,(Htb,Htc))).
-      specialize(part_betaG_b (g_rec G) T1 pt); intros. apply H0; try easy.
-      clear H0.
-      specialize(gttTC_after_subst (g_rec G) T1 (gtt_send p pt ys)); intros.
-      assert(gttTC T1 (gtt_send p pt ys)). apply H0; try easy. pfold. easy.
-      clear H0. 
-      destruct Htc. subst. pinversion H1; try easy. apply gttT_mon.
-      destruct H0 as (p1,(q1,(lis1,Htc))). subst. pinversion H1; try easy. subst. 
-      constructor.
-      apply gttT_mon.
-      apply gttT_mon. apply gttT_mon.
-    - inversion H. 
-      - subst.
-        pinversion He; try easy. subst.
-        specialize(subst_parts_depth 0 0 n pt g g Q H2 H1); intros.
-        specialize(IHn G pt G' Q). apply IHn; try easy.
-        intros. specialize(Hf n0). destruct Hf. 
-        - inversion H4. subst. exists 0. constructor.
-        - subst. specialize(subst_injG 0 0 (g_rec g) g Q Q0 H6 H2); intros. subst.
-          exists m. easy.
-        apply gttT_mon.
-      - subst.
-        pinversion He; try easy. subst.
-        specialize(guard_cont Hf); intros.
-        pinversion Ha; try easy.
-        - subst.
-          specialize(guard_cont Hc); intros.
-          specialize(decidable_isgPartsC_helper k lis s g ys xs); intros.
-          assert(exists (g' : gtt) (g'' : global),
-       onth k ys = Some (s, g') /\
-       gttTC g g' /\
-       (forall n : fin, exists m : fin, guardG n m g) /\
-       onth k xs = Some (s, g'') /\ gttTC g'' g' /\ (forall n : fin, exists m : fin, guardG n m g'')).
-          apply H6; try easy. clear H6.
-          clear H8 H0 H7 H5. destruct H9 as (g1,(g2,(Hg,(Hh,(Hi,(Hj,(Hk,Hl))))))).
-          specialize(IHn g1 pt g2 g).
-          assert(isgParts pt g2). apply IHn; try easy.
-          apply pa_sendr with (n := k) (s := s) (g := g2); try easy.
-        - subst. clear H5 H6. clear Q.
-          specialize(guard_breakG G Hc); intros.
-          destruct H5 as (T1,(Hta,(Htb,Htc))).
-          specialize(gttTC_after_subst (g_rec G) T1 (gtt_send p q ys)); intros.
-          assert(gttTC T1 (gtt_send p q ys)). apply H5; try easy. pfold. easy.
-          clear H5. destruct Htc. subst. pinversion H6. apply gttT_mon.
-          destruct H5 as (p1,(q1,(lis1,Htc))). subst. pinversion H6. subst.
-          specialize(part_betaG_b (g_rec G) (g_send p q lis1) pt); intros. apply H5; try easy.
-          clear H5 Htb.
-          specialize(guardG_betaG (g_rec G) (g_send p q lis1)); intros.
-          assert(forall n : fin, exists m : fin, guardG n m (g_send p q lis1)). apply H5; try easy.
-          clear H5.
-          specialize(guard_cont H9); intros.
-          specialize(decidable_isgPartsC_helper k lis s g ys lis1); intros.
-          assert(exists (g' : gtt) (g'' : global),
-        onth k ys = Some (s, g') /\
-        gttTC g g' /\
-        (forall n : fin, exists m : fin, guardG n m g) /\
-        onth k lis1 = Some (s, g'') /\ gttTC g'' g' /\ (forall n : fin, exists m : fin, guardG n m g'')).
-          apply H10; try easy. clear H10.
-          destruct H11 as (g1,(g2,(Hg,(Hh,(Hi,(Hj,(Hk,Hl))))))).
-          specialize(IHn g1 pt g2 g).
-          assert(isgParts pt g2). apply IHn; try easy.
-          apply pa_sendr with (n := k) (s := s) (g := g2); try easy.
-      apply gttT_mon.
-      apply gttT_mon. 
-      apply gttT_mon.
+  intros. apply H. 
+  - case_eq (eqb p s1); intros.
+    assert (p = s1). apply eqb_eq; try easy. subst. apply ha_sendp.
+  - case_eq (eqb p s2); intros.
+    assert (p = s2). apply eqb_eq; try easy. subst. apply ha_sendq.
+  - assert (p <> s1). apply eqb_neq; try easy. 
+    assert (p <> s2). apply eqb_neq; try easy.
+    apply ha_sendr with (n := 0) (s := o1) (g := o2); try easy.
 Qed.
 
-Lemma decidable_isgPartsC : forall G pt, wfgC G -> decidable (isgPartsC pt G).
+Lemma ishParts_hxs : forall [p s1 s2 o1 xs0],
+    (ishParts p (gtth_send s1 s2 (o1 :: xs0)) -> False) ->
+    (ishParts p (gtth_send s1 s2 xs0) -> False).
+Proof.
+  intros. apply H.
+  inversion H0. subst. apply ha_sendp. apply ha_sendq.
+  subst. apply ha_sendr with (n := Nat.succ n) (s := s) (g := g); try easy.
+Qed.
+
+Lemma ishParts_n : forall [n p s s' xs s0 g],
+    (ishParts p (gtth_send s s' xs) -> False) ->
+    onth n xs = Some(s0, g) -> 
+    (ishParts p g -> False).
+Proof.  
+  induction n; intros; try easy.
+  - apply H. destruct xs; try easy. simpl in *. subst.
+    - case_eq (eqb p s); intros.
+      assert (p = s). apply eqb_eq; try easy. subst. apply ha_sendp.
+    - case_eq (eqb p s'); intros.
+      assert (p = s'). apply eqb_eq; try easy. subst. apply ha_sendq.
+    - assert (p <> s). apply eqb_neq; try easy. 
+      assert (p <> s'). apply eqb_neq; try easy.
+      apply ha_sendr with (n := 0) (s := s0) (g := g); try easy.
+  - destruct xs; try easy.
+    specialize(ishParts_hxs H); intros.
+    specialize(IHn p s s' xs s0 g). apply IHn; try easy.
+Qed.
+
+Lemma mergeCtx_to_2R : forall ctxGLis ctxG,
+    isMergeCtx ctxG ctxGLis -> 
+    Forall (fun u => u = None \/ (exists ctxGi, u = Some ctxGi /\
+      Forall2R (fun u v => (u = None \/ u = v)) ctxGi ctxG
+    )) ctxGLis.
+Proof.
+  induction ctxGLis; intros; try easy.
+  inversion H.
+  - subst. constructor; try easy. right. exists ctxG.
+    split. easy. clear H IHctxGLis. induction ctxG; intros.
+    constructor. constructor; try easy. right. easy.
+  - subst. specialize(IHctxGLis ctxG H2). constructor; try easy. left. easy.
+  - subst.
+    specialize(IHctxGLis t H4). clear H.
+    constructor.
+    - right. exists t'. split. easy.
+      clear H4 IHctxGLis.
+      apply Forall3S_to_Forall2_r with (ctxG0 := t); try easy.
+      revert IHctxGLis. apply Forall_mono; intros.
+      destruct H. left. easy.
+      destruct H as (ctxGi,(Ha,Hb)). subst. right. exists ctxGi. split. easy.
+      specialize(Forall3S_to_Forall2_l t t' ctxG H3); intros.
+      clear H3 H4. clear ctxGLis t'.
+      revert Hb H. revert t ctxG.
+      induction ctxGi; intros; try easy.
+      - constructor.
+      - destruct t; try easy. destruct ctxG; try easy.
+        inversion Hb. subst. clear Hb. inversion H. subst. clear H.
+        specialize(IHctxGi t ctxG H5 H7). constructor; try easy.
+        clear H5 H7.
+        destruct H3. left. easy.
+        subst. destruct H4. left. easy. subst. right. easy.
+Qed.
+
+Lemma typh_with_more : forall gl ctxJ ctxG g3,
+            typ_gtth ctxJ gl g3 -> 
+            Forall2R (fun u v : option gtt => u = None \/ u = v) ctxJ ctxG -> 
+            typ_gtth ctxG gl g3.
+Proof.
+  induction gl using gtth_ind_ref; intros.
+  - inversion H. subst. constructor.
+    clear H. revert H3 H0. revert ctxG ctxJ. induction n; intros.
+    - destruct ctxJ; try easy. destruct ctxG; try easy.
+      inversion H0. subst. clear H0.
+      simpl in H3. subst. destruct H4; try easy. 
+    - destruct ctxJ; try easy. destruct ctxG; try easy.
+      inversion H0. subst. clear H0.
+      specialize(IHn ctxG ctxJ). apply IHn; try easy.
+  - inversion H0. subst. constructor; try easy.
+    clear H7 H0. revert H8 H1 H.
+    revert xs ctxJ ctxG. clear p q.
+    induction ys; intros.
+    - destruct xs; try easy.
+    - destruct xs; try easy. inversion H. subst. clear H. inversion H8. subst. clear H8.
+      specialize(IHys xs ctxJ ctxG H7 H1 H4). constructor; try easy. clear H7 H4 IHys.
+      destruct H5. left. easy.
+      destruct H as (s1,(g1,(g2,(Ha,(Hb,Hc))))). subst.
+      destruct H3; try easy. destruct H as (s2,(g3,(Hd,He))). inversion Hd. subst.
+      right. exists s2. exists g3. exists g2. split. easy. split. easy.
+      specialize(He ctxJ ctxG g2). apply He; try easy.
+Qed.
+
+Lemma typ_gtth_pad_l : forall Gl' g1 ctxJ ctxG,
+    typ_gtth (noneLis (Datatypes.length ctxJ) ++ ctxG) Gl' g1 -> 
+    typ_gtth (ctxJ ++ ctxG)%list Gl' g1.
 Proof.
   intros.
-  apply decidable_isgPartsC_s; try easy.
-  unfold wfgC in *. unfold wfgCw. 
-  destruct H. exists x. easy.
+  specialize(typh_with_more Gl' (noneLis (Datatypes.length ctxJ) ++ ctxG) (ctxJ ++ ctxG) g1); intros. apply H0; try easy.
+  clear H0 H. induction ctxJ; intros; try easy.
+  - simpl. induction ctxG; intros; try easy. constructor. constructor; try easy. right. easy.
+  - constructor; try easy. left. easy.
 Qed.
 
+Lemma typ_gtth_pad_r : forall g2 g3 ctxJ ctxG,
+        typ_gtth ctxJ g2 g3 -> 
+        typ_gtth (ctxJ ++ ctxG)%list g2 g3.
+Proof.
+  intros.
+  specialize(typh_with_more g2 ctxJ (ctxJ ++ ctxG) g3); intros.
+  apply H0; try easy.
+  clear H0 H. induction ctxJ; intros; try easy. constructor.
+  constructor; try easy. right. easy.
+Qed.
+
+Lemma typh_with_less : forall ctxGi' ctxG g4 g3,
+            typ_gtth ctxG g4 g3 -> 
+            Forall2R (fun u v : option gtt => u = None \/ u = v) ctxGi' ctxG -> 
+            usedCtx ctxGi' g4 -> 
+            typ_gtth ctxGi' g4 g3.
+Proof.
+  intros. revert H H0 H1. revert g3 ctxGi' ctxG.
+  induction g4 using gtth_ind_ref; intros.
+  - inversion H. subst. constructor; try easy. 
+    inversion H1. subst.
+    clear H1 H. revert H4 H0. revert g3 ctxG G. induction n; intros; try easy.
+    - destruct ctxG; try easy. simpl in H4. subst.
+      inversion H0. subst. simpl. destruct H3; try easy.
+    - destruct ctxG; try easy. inversion H0. subst. 
+      apply IHn with (ctxG := ctxG); try easy.
+  - inversion H0. subst.
+    constructor; try easy. 
+    inversion H2. subst.
+    specialize(mergeCtx_to_2R ctxGLis ctxGi' H6); intros. clear H6 H8 H2 H0.
+    revert H3 H10 H9 H1 H. revert ctxGi' ctxG ys ctxGLis. clear p q.
+    induction xs; intros; try easy.
+    - destruct ys; try easy.
+    - destruct ys; try easy. destruct ctxGLis; try easy.
+      inversion H. subst. clear H. inversion H9. subst. clear H9.
+      inversion H3. subst. clear H3. inversion H10. subst. clear H10.
+      specialize(IHxs ctxGi' ctxG ys ctxGLis).
+      assert(Forall2
+         (fun (u : option (sort * gtth)) (v : option (sort * gtt)) =>
+          u = None /\ v = None \/
+          (exists (s : sort) (g : gtth) (g' : gtt),
+             u = Some (s, g) /\ v = Some (s, g') /\ typ_gtth ctxGi' g g')) xs ys).
+      apply IHxs; try easy. constructor; try easy.
+      clear H H12 H7 H8 H5 IHxs.
+      destruct H6. left. easy.
+      destruct H as (s1,(g1,(g2,(Ha,(Hb,Hc))))). subst.
+      destruct H4; try easy. destruct H as (s2,(g3,(Hd,He))). inversion Hd. subst.
+      destruct H9; try easy. destruct H as (ct,(s3,(g4,(Hf,(Hg,Hh))))). inversion Hg. subst.
+      destruct H2; try easy. destruct H as (ct2,(Hi,Hj)). inversion Hi. subst.
+      right. exists s3. exists g4. exists g2.
+      split. easy. split. easy.
+      specialize(He g2 ct2 ctxG).
+      assert(typ_gtth ct2 g4 g2).
+      {
+        apply He; try easy.
+        clear Hh Hi Hc Hd He Hg. 
+        revert Hj H1. revert ctxGi' ctxG.
+        induction ct2; intros; try easy.
+        - constructor.
+        - destruct ctxGi'; try easy. destruct ctxG; try easy.
+          inversion Hj. subst. clear Hj. inversion H1. subst. clear H1.
+          specialize(IHct2 ctxGi' ctxG H5 H7). constructor; try easy.
+          destruct H3. left. easy. subst. destruct H4. left. easy. subst. right. easy.
+      }
+      apply typh_with_more with (ctxJ := ct2); try easy.
+Qed.
+
+Lemma typh_with_more2 {A} : forall ctxGi' ctxG (ctxJ : list A) gl g3,
+            typ_gtth (noneLis (Datatypes.length ctxJ) ++ ctxGi') gl g3 -> 
+            Forall2R (fun u v : option gtt => u = None \/ u = v) ctxGi' ctxG -> 
+            typ_gtth (noneLis (Datatypes.length ctxJ) ++ ctxG) gl g3.
+Proof.
+  intros.
+  apply typh_with_more with (ctxJ := (noneLis (Datatypes.length ctxJ) ++ ctxGi')); try easy.
+  clear H.
+  induction ctxJ; intros; try easy.
+  constructor; try easy. left. easy.
+Qed.
+
+Lemma ctx_back : forall s s' xs ys0 ctxG,
+      typ_gtth ctxG (gtth_send s s' xs) (gtt_send s s' ys0) -> 
+      usedCtx ctxG (gtth_send s s' xs) -> 
+      exists ctxGLis, 
+      Forall3 (fun u v w => (u = None /\ v = None /\ w = None) \/ (exists ct s g g', u = Some ct /\ v = Some(s, g) /\ w = Some(s, g') /\ typ_gtth ct g g' /\ usedCtx ct g)) ctxGLis xs ys0 /\
+      isMergeCtx ctxG ctxGLis.
+Proof.
+  intros.
+  inversion H. subst. clear H.
+  inversion H0. subst. clear H0.
+  clear H4. clear s s'.
+  specialize(mergeCtx_to_2R ctxGLis ctxG H3); intros. 
+  exists ctxGLis. split; try easy. clear H3.
+  revert H7 H6 H. revert ys0 ctxG ctxGLis.
+  induction xs; intros.
+  - destruct ys0; try easy. destruct ctxGLis; try easy. constructor.
+  - destruct ys0; try easy. destruct ctxGLis; try easy.
+    inversion H7. subst. clear H7. inversion H6. subst. clear H6.
+    inversion H. subst. clear H.
+    specialize(IHxs ys0 ctxG ctxGLis H5 H8 H6). constructor; try easy.
+    clear H6 H8 H5 IHxs.
+    - destruct H4. destruct H. subst. destruct H3. destruct H. subst. left. easy.
+      destruct H as (s1,(g1,(g2,Ha))). easy.
+    - destruct H as (ct,(s1,(g1,(Ha,(Hb,Hc))))). subst.
+      destruct H3; try easy. destruct H as (s2,(g2,(g3,(Hd,(He,Hf))))). inversion Hd. subst.
+      destruct H2; try easy. destruct H as (ct2,(Hg,Hh)). inversion Hg. subst.
+      right. exists ct2. exists s2. exists g2. exists g3.
+      split. easy. split. easy. split. easy. split; try easy.
+      apply typh_with_less with (ctxG := ctxG); try easy.
+Qed.
+
+Lemma mergeCtx_sl : forall n ctxGLis ctxGi ctxG,
+        onth n ctxGLis = Some ctxGi -> 
+        isMergeCtx ctxG ctxGLis -> 
+        Forall2R (fun u v => u = v \/ u = None) ctxGi ctxG.
+Proof.
+  induction n; intros.
+  - destruct ctxGLis; try easy. 
+    simpl in H. subst.
+    inversion H0. subst. 
+    - clear H0. induction ctxGi; intros; try easy. constructor.
+      constructor; try easy. left. easy.
+    - subst.
+      clear H4 H0. clear ctxGLis.
+      revert H3. revert ctxG t. induction ctxGi; intros; try easy.
+      - constructor.
+      - inversion H3; try easy.
+        - subst. clear H3 IHctxGi. constructor. left. easy. clear a.
+          induction ctxGi; intros; try easy. constructor. constructor; try easy. left. easy.
+        - subst. specialize(IHctxGi xc xa H6). constructor; try easy.
+          clear H3 H6. 
+          - destruct H4. destruct H as (Ha,(Hb,Hc)). subst. left. easy.
+          - destruct H. destruct H as (t1,(Ha,(Hb,Hc))). subst. left. easy.
+          - destruct H. destruct H as (t1,(Ha,(Hb,Hc))). subst. right. easy.
+          - destruct H as (t1,(Ha,(Hb,Hc))). subst. left. easy.
+  - destruct ctxGLis; try easy.
+    inversion H0; try easy.
+    - subst. destruct n; try easy.
+    - subst. specialize(IHn ctxGLis ctxGi ctxG). apply IHn; try easy.
+    - subst. specialize(IHn ctxGLis ctxGi t H H5).
+      clear H0 H H5.
+      clear ctxGLis n.
+      revert H4 IHn. revert t ctxG t'.
+      induction ctxGi; intros; try easy.
+      - constructor.
+      - inversion H4. 
+        - subst. inversion IHn; try easy.
+        - subst. destruct ctxG; try easy.
+        - subst. clear H4.
+          inversion IHn. subst. clear IHn.
+          specialize(IHctxGi xa xc xb H0 H6). constructor; try easy.
+          clear IHctxGi H0 H6.
+          destruct H4. subst.
+          - destruct H. destruct H as (Ha,(Hb,Hc)). subst. left. easy.
+          - destruct H. destruct H as (t1,(Ha,(Hb,Hc))). subst. right. easy.
+          - destruct H. destruct H as (t1,(Ha,(Hb,Hc))). subst. left. easy.
+          - destruct H as (t1,(Ha,(Hb,Hc))). subst. left. easy.
+          subst. right. easy.
+Qed.
+
+Lemma shift_to : forall (g1 : gtt) (p : string) (Gl : gtth) (ctxG ctxJ : seq.seq (option gtt)),
+typ_gtth ctxG Gl g1 ->
+(ishParts p Gl -> False) ->
+usedCtx ctxG Gl ->
+exists Gl' : gtth,
+  typ_gtth (noneLis (Datatypes.length ctxJ) ++ ctxG) Gl' g1 /\
+  usedCtx (noneLis (Datatypes.length ctxJ) ++ ctxG) Gl' /\ (ishParts p Gl' -> False).
+Proof.
+  intros g1 p Gl. revert g1 p.
+  induction Gl using gtth_ind_ref; intros; try easy.
+  - inversion H1. subst.
+    exists (gtth_hol ((Datatypes.length ctxJ) + n)).
+    assert(extendLis (Datatypes.length ctxJ + n) (Some G) =
+     (noneLis (Datatypes.length ctxJ) ++ extendLis n (Some G))%SEQ).
+      {
+       clear H1 H0 H. clear g1 p. induction ctxJ; intros; try easy.
+       simpl in *. replace (extendLis (Datatypes.length ctxJ + n)%Nrec (Some G))%SEQ with
+          ((noneLis (Datatypes.length ctxJ) ++ extendLis n (Some G))%SEQ). easy. 
+      }
+      rename H2 into Ht.
+    split.
+    - inversion H. subst. 
+      specialize(extendExtract n (Some G)); intros.
+      specialize(eq_trans (esym H4) H2); intros. inversion H3. subst.
+      clear H4 H3 H2.
+      constructor. clear H1 H0 H Ht. clear p. revert G n.
+      induction ctxJ; intros; try easy. simpl in *.
+      apply extendExtract; try easy.
+      specialize(IHctxJ G n). easy.
+    - split.
+      replace ((noneLis (Datatypes.length ctxJ) ++ extendLis n (Some G))) with (extendLis (Datatypes.length ctxJ + n) (Some G)). constructor.
+    - intros. inversion H2; try easy.
+  - inversion H0. subst.
+    inversion H2. subst.
+    assert(
+      exists zs,
+      Forall2 (fun u v => (u = None /\ v = None) \/ exists s g g', u = Some(s, g) /\ v = Some(s, g') /\ typ_gtth (noneLis (Datatypes.length ctxJ) ++ ctxG) g g') zs ys /\
+      List.Forall2 (fun u v => (u = None /\ v = None) \/ (exists ctxGi s g, u = Some ctxGi /\ v = Some (s, g) /\ usedCtx (noneLis (Datatypes.length ctxJ) ++ ctxGi) g)) ctxGLis zs /\
+      Forall (fun u => u = None \/ (exists s g, u = Some(s, g) /\ (ishParts p0 g -> False))) zs 
+    ). 
+    {
+      specialize(mergeCtx_to_2R ctxGLis ctxG H6); intros.
+      clear H6 H8 H2 H0.
+      revert H H1 H9 H10 H3.
+      revert p q xs p0 ctxG ctxJ ctxGLis.
+      induction ys; intros; try easy.
+      - destruct xs; try easy. destruct ctxGLis; try easy.
+        exists nil. easy.
+      - destruct xs; try easy. destruct ctxGLis; try easy.
+        inversion H9. subst. clear H9. inversion H10. subst. clear H10.
+        inversion H3. subst. clear H3. inversion H. subst. clear H.
+        assert(exists zs : seq.seq (option (sort * gtth)),
+         Forall2
+           (fun (u : option (sort * gtth)) (v : option (sort * gtt)) =>
+            u = None /\ v = None \/
+            (exists (s : sort) (g : gtth) (g' : gtt),
+               u = Some (s, g) /\
+               v = Some (s, g') /\ typ_gtth (noneLis (Datatypes.length ctxJ) ++ ctxG) g g')) zs ys /\
+         Forall2
+           (fun (u : option (seq.seq (option gtt))) (v : option (sort * gtth)) =>
+            u = None /\ v = None \/
+            (exists (ctxGi : seq.seq (option gtt)) (s : sort) (g : gtth),
+               u = Some ctxGi /\
+               v = Some (s, g) /\ usedCtx (noneLis (Datatypes.length ctxJ) ++ ctxGi) g)) ctxGLis zs /\
+         Forall
+           (fun u : option (sort * gtth) =>
+            u = None \/ (exists (s : sort) (g : gtth), u = Some (s, g) /\ (ishParts p0 g -> False))) zs).
+        specialize(IHys p q xs p0 ctxG ctxJ ctxGLis). apply IHys; try easy.
+        specialize(ishParts_hxs H1); try easy.
+        clear IHys H10 H8 H9 H7.
+        destruct H as (zs,(Ha,(Hb,Hc))).
+        destruct H6.
+        - destruct H. subst. destruct H5. destruct H. subst.
+          exists (None :: zs).
+          - split. constructor; try easy. left. easy.
+          - split. constructor; try easy. left. easy.
+          - constructor; try easy. left. easy.
+          destruct H as (s1,(g1,(g2,Ht))). easy.
+        - destruct H as (ctxGi,(s1,(g1,(Hd,(He,Hf))))). subst.
+          destruct H5; try easy. destruct H as (s2,(g2,(g3,(Hg,(Hh,Hi))))). inversion Hg. subst.
+          destruct H4; try easy. destruct H as (ctxGi',(Hj,Hk)). inversion Hj. subst.
+          destruct H3; try easy. destruct H as (s3,(g4,(Hl,Hm))). inversion Hl. subst.
+          specialize(Hm g3 p0 ctxGi' ctxJ).
+          assert(exists Gl' : gtth,
+       typ_gtth (noneLis (Datatypes.length ctxJ) ++ ctxGi') Gl' g3 /\
+       usedCtx (noneLis (Datatypes.length ctxJ) ++ ctxGi') Gl' /\ (ishParts p0 Gl' -> False)).
+          {
+            apply Hm; try easy.
+            - apply typh_with_less with (ctxG := ctxG); try easy.
+            - specialize(ishParts_x H1); try easy.
+          }
+          destruct H as (gl,(Hd,(He,Hta))). exists (Some (s3, gl) :: zs).
+          - split. constructor; try easy.
+            right. exists s3. exists gl. exists g3. split. easy. split. easy.
+            apply typh_with_more2 with (ctxGi' := ctxGi'); try easy.
+          - split. constructor; try easy. right. exists ctxGi'. exists s3. exists gl. easy.
+          - constructor; try easy. right. exists s3. exists gl. easy.
+    } 
+    destruct H3 as (zs,(Ha,(Hb,Hc))).
+    exists (gtth_send p q zs).
+    - split. constructor; try easy.
+      clear H H0 H1 H2 H6 H10 Hb Hc. 
+      revert Ha H9 H8. revert ctxG ctxJ ys zs. clear p q p0 ctxGLis.
+      induction xs; intros; try easy.
+      specialize(SList_f a xs H8); intros.
+      destruct ys; try easy. destruct zs; try easy. inversion Ha. subst. clear Ha. 
+      inversion H9. subst. clear H9.
+      destruct H.
+      - specialize(IHxs ctxG ctxJ ys zs). apply SList_b. apply IHxs; try easy.
+      - destruct H as (H,(a0,Ha)). subst. 
+        destruct ys; try easy. destruct zs; try easy. clear H7 H5 H8 IHxs.
+        destruct H4; try easy.
+        destruct H as (s1,(g1,(g2,(Ha,(Hb,Hc))))). subst.
+        destruct H3; try easy. destruct H as (s2,(g3,(g4,(Hd,(He,Hf))))). subst. easy.
+    - split.
+      assert(exists ks, Forall2 (fun u v => (u = None /\ v = None) \/ (exists ctxGi ctxGi', u = Some ctxGi /\ v = Some ctxGi' /\ (noneLis (Datatypes.length ctxJ) ++ ctxGi) = ctxGi')) ctxGLis ks).
+      {
+        clear Hc Hb Ha H10 H6 H9 H8 H2 H1 H0 H.
+        induction ctxGLis; intros; try easy.
+        exists nil. easy.
+        destruct IHctxGLis as (ks, H).
+        destruct a.
+        - exists (Some (noneLis (Datatypes.length ctxJ) ++ l) :: ks). constructor; try easy.
+          right. exists l. exists (noneLis (Datatypes.length ctxJ) ++ l). easy.
+        - exists (None :: ks). constructor; try easy. left. easy.
+      }
+      destruct H3 as (ks, H3).
+      clear Hc Ha H10 H9 H8 H2 H1 H0 H.
+      clear p0 ys. 
+      apply used_con with (ctxGLis := ks); try easy.
+      - clear Hb. revert H3 H6. 
+        revert ctxG ctxJ ks. clear p q xs zs.
+        induction ctxGLis; intros; try easy.
+        destruct ks; try easy. inversion H3. subst. clear H3.
+        inversion H6.
+        - subst. destruct ks; try easy. destruct H2; try easy.
+          destruct H as (ct1,(ct2,(Ha,(Hb,Hc)))). inversion Ha. subst. constructor.
+        - subst. destruct H2. destruct H. subst.
+          specialize(IHctxGLis ctxG ctxJ ks). 
+          assert(isMergeCtx (noneLis (Datatypes.length ctxJ) ++ ctxG) ks). apply IHctxGLis; try easy.
+          constructor. easy.
+          destruct H as (ct1,(ct2,Ha)). easy.
+        - subst. specialize(IHctxGLis t ctxJ ks H5 H4).
+          destruct H2; try easy. destruct H as (ct1,(ct2,(Ha,(Hb,Hc)))). inversion Ha. subst.
+          apply cmconss with (t := (noneLis (Datatypes.length ctxJ) ++ t)); try easy.
+          clear H4 H5 Ha H6 IHctxGLis. induction ctxJ; intros; try easy.
+          simpl. constructor; try easy. left. easy.
+      - revert H3 Hb. clear H6.
+        revert ctxJ zs ks. clear p q xs ctxG.
+        induction ctxGLis; intros.
+        - destruct ks; try easy. destruct zs; try easy.
+        - destruct ks; try easy. destruct zs; try easy. 
+          inversion H3. subst. clear H3. inversion Hb. subst. clear Hb.
+          specialize(IHctxGLis ctxJ zs ks H5 H6). constructor; try easy.
+          clear IHctxGLis H5 H6.
+          - destruct H2. destruct H. subst. destruct H3. destruct H. subst. left. easy.
+            destruct H as(ct,(s1,(g1,Ha))). easy.
+          - destruct H as (ct1,(ct2,(Ha,(Hb,Hc)))). subst.
+            destruct H3; try easy. destruct H as (ct2,(s2,(g2,(Ha,(Hb,Hc))))). inversion Ha. subst.
+            right. exists (noneLis (Datatypes.length ctxJ) ++ ct2). exists s2. exists g2. easy.
+    - intros.
+      inversion H3. 
+      - subst. apply H1. constructor.
+      - subst. apply H1. constructor.
+      - subst. specialize(some_onth_implies_In n zs (s, g) H14); intros.
+        specialize(Forall_forall (fun u : option (sort * gtth) =>
+        u = None \/ (exists (s : sort) (g : gtth), u = Some (s, g) /\ (ishParts p0 g -> False))) zs); intros.
+        destruct H5. specialize(H5 Hc). clear H7 Hc.
+        specialize(H5 (Some(s, g)) H4). destruct H5; try easy.
+        destruct H5 as (s1,(g1,(Hta,Htb))). inversion Hta. subst.
+        apply Htb; try easy.
+Qed.
+
+Lemma ctx_merge : forall s s0 s1 g1 l p,
+    p <> s -> p <> s0 ->
+    (exists (G' : gtth) (ctxG : seq.seq (option gtt)),
+       typ_gtth ctxG G' g1 /\
+       (ishParts p G' -> False) /\
+       Forall
+         (fun u : option gtt =>
+          u = None \/
+          (exists (q : string) (lsg : seq.seq (option (sort * gtt))),
+             u = Some (gtt_send p q lsg) \/ u = Some (gtt_send q p lsg) \/ u = Some gtt_end)) ctxG /\
+       usedCtx ctxG G') -> 
+       (exists (G' : gtth) (ctxG : seq.seq (option gtt)),
+       typ_gtth ctxG G' (gtt_send s s0 l) /\
+       (ishParts p G' -> False) /\
+       Forall
+         (fun u : option gtt =>
+          u = None \/
+          (exists (q : string) (lsg : seq.seq (option (sort * gtt))),
+             u = Some (gtt_send   p q lsg) \/ u = Some (gtt_send q p lsg) \/ u = Some gtt_end)) ctxG /\
+       usedCtx ctxG G') -> 
+       (exists (G' : gtth) (ctxG : seq.seq (option gtt)),
+  typ_gtth ctxG G' (gtt_send s s0 (Some (s1, g1) :: l)) /\
+  (ishParts p G' -> False) /\
+  Forall
+    (fun u : option gtt =>
+     u = None \/
+     (exists (q : string) (lsg : seq.seq (option (sort * gtt))),
+        u = Some (gtt_send p q lsg) \/ u = Some (gtt_send q p lsg) \/ u = Some gtt_end)) ctxG /\
+  usedCtx ctxG G').
+Proof.
+  intros.
+  destruct H1 as (Gl,(ctxG,(Ha,(Hb,(Hc,Hd))))).
+  destruct H2 as (Gl2,(ctxJ,(He,(Hf,(Hg,Hh))))).
+  inversion He. subst.
+  - specialize(some_onth_implies_In n ctxJ (gtt_send s s0 l) H1); intros.
+    specialize(Forall_forall (fun u : option gtt =>
+        u = None \/
+        (exists (q : string) (lsg : seq.seq (option (sort * gtt))),
+           u = Some (gtt_send p q lsg) \/ u = Some (gtt_send q p lsg) \/ u = Some gtt_end)) ctxJ); intros.
+    destruct H3. specialize(H3 Hg). clear H4 Hg.
+    specialize(H3 (Some (gtt_send s s0 l)) H2). destruct H3; try easy.
+    destruct H3 as (q1,(lsg,H3)).
+    - destruct H3. inversion H3. subst. easy.
+    - destruct H3. inversion H3. subst. easy.
+    - inversion H3.
+  - subst.
+    assert(exists Gl', typ_gtth (noneLis (List.length ctxJ) ++ ctxG) Gl' g1 /\ usedCtx (noneLis (List.length ctxJ) ++ ctxG) Gl' /\ (ishParts p Gl' -> False)).
+    {
+      clear Hc Hf He Hg Hh H5 H7.
+      clear H H0.
+      revert Ha Hb Hd. revert g1 p Gl ctxG ctxJ. clear s s0 s1 l xs.
+      apply shift_to; try easy.
+    }
+    destruct H1 as (Gl',(H1,(H2,Htm))).
+    exists (gtth_send s s0 (Some (s1, Gl') :: xs)). exists (ctxJ ++ ctxG).
+    - split.
+      constructor; try easy. apply SList_b; try easy.
+      constructor; try easy.
+      - right. exists s1. exists Gl'. exists g1. split. easy. split. easy.
+        apply typ_gtth_pad_l; try easy.
+      - revert H7. apply Forall2_mono; intros.
+        destruct H3. left. easy.
+        right. destruct H3 as (s2,(g2,(g3,(Hta,(Htb,Htc))))). subst.
+        exists s2. exists g2. exists g3. split. easy. split. easy.
+        apply typ_gtth_pad_r with (ctxG := ctxG); try easy.
+    - split.
+      intros. inversion H3. subst. easy. subst. easy. subst.
+      destruct n.
+      - simpl in H12. inversion H12. subst. apply Hb. easy.
+      - apply Hf. apply ha_sendr with (n := n) (s := s2) (g := g); try easy.
+    - split.
+      clear Htm H2 H1 H7 H5 Hh He Hf Hd Hb Ha H0 H. revert Hg Hc.
+      revert p ctxG. clear s s0 s1 g1 l Gl xs Gl'.
+      induction ctxJ; intros; try easy. inversion Hg. subst. clear Hg.
+      specialize(IHctxJ p ctxG H2 Hc). constructor; try easy.
+    - inversion Hh. subst.
+      apply used_con with (ctxGLis := Some (noneLis (Datatypes.length ctxJ) ++ ctxG) :: ctxGLis); try easy.
+      apply cmconss with (t := ctxJ); try easy.
+      clear H10 H8 Htm H2 H1 H7 H5  Hh Hg He Hf Hd Hc Hb Ha H0 H.
+      clear ctxGLis Gl' xs Gl p l g1 s1 s s0.
+      induction ctxJ; intros; try easy. simpl. constructor.
+      constructor; try easy. 
+      destruct a. right. right. left. exists g. easy.
+      left. easy.
+    - constructor; try easy. right. exists (noneLis (Datatypes.length ctxJ) ++ ctxG).
+      exists s1. exists Gl'. easy.
+Qed.
 
 
 Lemma part_cont : forall ys r p q,
@@ -760,7 +1129,6 @@ Proof.
     apply gttT_mon.
 Qed.
   
-
 Lemma part_cont_b : forall n ys s g r p q,
     onth n ys = Some(s, g) ->
     isgPartsC r g ->
@@ -932,57 +1300,53 @@ Proof.
     apply gttT_mon.
     apply gttT_mon.
 Qed.
-  
-Lemma parts_to_word : forall p G, isgPartsC p G -> exists w r, (gttmap G w None (gnode_pq r p) \/ gttmap G w None (gnode_pq p r)).
+
+Lemma word_to_parts : forall G w' p q0,
+             gttmap G w' None (gnode_pq p q0) \/
+             gttmap G w' None (gnode_pq q0 p) -> 
+             wfgCw G -> 
+             isgPartsC p G.
 Proof.
-  intros.
-  unfold isgPartsC in H.
-  destruct H as (Gl,(Ha,(Hb,Hc))).
-  specialize(isgParts_depth_exists p Gl Hc); intros.
-  destruct H as (n, H).
-  clear Hc Hb.
-  revert H Ha. revert Gl G p.
-  induction n; intros; try easy.
-  - inversion H. subst.
-    exists nil. exists q. right. pinversion Ha. subst. constructor.
-    apply gttT_mon.
-  - subst.
-    exists nil. exists p0. left. pinversion Ha. subst. constructor.
-    apply gttT_mon.
-  - inversion H. subst.
-    pinversion Ha. subst.
-    specialize(subst_parts_depth 0 0 n p g g Q H2 H1); intros.
-    specialize(IHn Q G p). apply IHn; try easy.
-    apply gttT_mon.
-  - subst.
-    pinversion Ha. subst.
-    assert(exists gl, onth k ys = Some(s, gl) /\ gttTC g gl).
-    {
-      clear H4 H2 H1 H Ha IHn.
-      revert H8 H3. revert lis ys s g.
-      induction k; intros; try easy.
-      - destruct lis; try easy.
-        destruct ys; try easy.
-        inversion H8. subst. clear H8.
-        simpl in H3. subst. 
-        destruct H2; try easy. destruct H as (s1,(g1,(g2,(Ha,(Hb,Hc))))). inversion Ha. subst.
-        exists g2. destruct Hc; try easy.
-      - destruct lis; try easy.
-        destruct ys; try easy.
-        inversion H8. subst. clear H8.
-        specialize(IHk lis ys s g). apply IHk; try easy.
-    }
-    destruct H0 as (gl,(Hb,Hc)).
-    specialize(IHn g gl p H4 Hc).
-    destruct IHn as (w,(r,Hd)).
-    exists (k :: w). exists r.
-    destruct Hd.
-    - left. apply gmap_con with (st := s) (gk := gl); try easy.
-    - right. apply gmap_con with (st := s) (gk := gl); try easy.
-    apply gttT_mon.
+  intros G w'. revert G.
+  induction w'; intros.
+  - destruct H.
+    inversion H. subst. apply triv_pt_p_s; try easy.
+    inversion H. subst. apply triv_pt_q_s; try easy.
+  - destruct H.
+    - inversion H. subst.
+      specialize(wfgCw_after_step_all); intros.
+      specialize(wfgCw_triv p0 q xs H0); intros. destruct H2.
+      specialize(H1 xs p0 q H2 H0); intros.
+      clear H2 H3.
+      specialize(Forall_prop a xs (st, gk) (fun u : option (sort * gtt) =>
+        u = None \/ (exists (st : sort) (g : gtt), u = Some (st, g) /\ wfgCw g)) H4 H1); intros.
+      destruct H2; try easy. destruct H2 as (s1,(g1,(Ha,Hb))). inversion Ha. subst.
+      specialize(IHw' g1 p q0).
+      assert(isgPartsC p g1). apply IHw'; try easy.
+      left. easy.
+      - case_eq (eqb p p0); intros.
+        assert (p = p0). apply eqb_eq; try easy. subst. apply triv_pt_p_s; try easy.
+      - case_eq (eqb p q); intros.
+        assert (p = q). apply eqb_eq; try easy. subst. apply triv_pt_q_s; try easy.
+      - assert (p <> p0). apply eqb_neq; try easy.
+        assert (p <> q). apply eqb_neq; try easy.
+        apply part_cont_b_s with (n := a) (s := s1) (g := g1); try easy.
+    - inversion H. subst.
+      specialize(wfgCw_after_step_all); intros.
+      specialize(wfgCw_triv p0 q xs H0); intros. destruct H2.
+      specialize(H1 xs p0 q H2 H0); intros.
+      clear H2 H3.
+      specialize(Forall_prop a xs (st, gk) (fun u : option (sort * gtt) =>
+        u = None \/ (exists (st : sort) (g : gtt), u = Some (st, g) /\ wfgCw g)) H4 H1); intros.
+      destruct H2; try easy. destruct H2 as (s1,(g1,(Ha,Hb))). inversion Ha. subst.
+      specialize(IHw' g1 p q0).
+      assert(isgPartsC p g1). apply IHw'; try easy.
+      right. easy.
+      - case_eq (eqb p p0); intros.
+        assert (p = p0). apply eqb_eq; try easy. subst. apply triv_pt_p_s; try easy.
+      - case_eq (eqb p q); intros.
+        assert (p = q). apply eqb_eq; try easy. subst. apply triv_pt_q_s; try easy.
+      - assert (p <> p0). apply eqb_neq; try easy.
+        assert (p <> q). apply eqb_neq; try easy.
+        apply part_cont_b_s with (n := a) (s := s1) (g := g1); try easy.
 Qed.
-
-
-
-
-  
