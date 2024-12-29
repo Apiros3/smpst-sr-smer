@@ -9,12 +9,12 @@ From SST Require Import src.header src.sim src.expr.
 Section process.
 
 Inductive process : Type := 
-  | p_var : fin -> process
-  | p_inact : process
   | p_send : part -> label -> expr -> process -> process
-  | p_recv : part -> list (option process) -> process 
-  | p_ite : expr -> process -> process -> process 
-  | p_rec : process -> process.
+  | p_recv : part -> list(option process) -> process 
+  | p_ite : expr -> process -> process -> process
+  | p_rec : process -> process
+  | p_var : nat -> process
+  | p_inact : process.
 
 Section process_ind_ref.
   Variable P : process -> Prop.
@@ -32,8 +32,6 @@ Section process_ind_ref.
   Fixpoint process_ind_ref p : P p.
   Proof.
     destruct p.
-    - apply (P_var n).
-    - apply (P_inact).
     - apply (P_send s n e p (process_ind_ref p)).
     - apply (P_recv).
       induction l as [ | c l IH].
@@ -44,7 +42,9 @@ Section process_ind_ref.
         - apply IH.
     - apply (P_ite e p1 p2 (process_ind_ref p1) (process_ind_ref p2)).
     - apply (P_rec p (process_ind_ref p)). 
-  Qed.
+    - apply (P_var n).
+    - apply (P_inact).
+Qed.
 
 End process_ind_ref.
 
