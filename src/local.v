@@ -282,31 +282,96 @@ Proof. pcofix CIH.
        right. apply CIH.
 Qed.
 
-Lemma subtype_monotone : monotone2 subtype.
-Proof.
-  unfold monotone2.
-  intros. induction IN; intros.
-  - constructor.
-  - constructor.
-    revert H. revert ys. 
-    induction xs. destruct ys; try easy.
-    intros. destruct ys; try easy. simpl.
-    simpl in H. destruct o; try easy. destruct p0. destruct a; try easy. destruct p0.
-    destruct H. destruct H0. split; try easy. split; try easy. apply LE; try easy. apply IHxs; try easy.
-    destruct a; try easy. destruct p0. apply IHxs; try easy. apply IHxs; try easy. 
-  - constructor.
-    revert H. revert ys.
-    induction xs. destruct ys; try easy.
-    intros. destruct ys; try easy. simpl in *.
-    destruct a; try easy. destruct p0. destruct o; try easy. destruct p0. 
-    destruct H. destruct H0. split; try easy. split. apply LE; try easy. apply IHxs; try easy.
-    destruct o; try easy. destruct p0. apply IHxs; try easy. apply IHxs; try easy.
+Lemma mon_wfrec: forall ys xs r r',
+  wfrec subsort r ys xs ->
+  (forall x0 x1 : ltt, r x0 x1 -> r' x0 x1) ->
+  wfrec subsort r' ys xs.
+Proof. intro ys.
+       induction ys; intros.
+       - simpl. easy.
+       - simpl. simpl in H.
+         destruct a. destruct p. 
+         case_eq xs; intros.
+         + subst. easy.
+         + subst. destruct o. destruct p. split. easy. split.
+           apply H0. easy. 
+           apply IHys with (r := r). easy. easy.
+           easy.
+         + case_eq xs; intros.
+           ++ subst. easy.
+           ++ subst. destruct o. destruct p. 
+              apply IHys with (r := r). easy. easy.
+              apply IHys with (r := r). easy. easy.
 Qed.
 
-Lemma subtype_end : forall H, subtypeC ltt_end H -> H = ltt_end.
+Lemma mon_wfsend: forall ys xs r r',
+  wfsend subsort r ys xs ->
+  (forall x0 x1 : ltt, r x0 x1 -> r' x0 x1) ->
+  wfsend subsort r' ys xs.
+Proof. intro ys.
+       induction ys; intros.
+       - simpl. easy.
+       - simpl. simpl in H.
+         destruct a. destruct p. 
+         case_eq xs; intros.
+         + subst. easy.
+         + subst. destruct o. destruct p. split. easy. split.
+           apply H0. easy. 
+           apply IHys with (r := r). easy. easy.
+           easy.
+         + case_eq xs; intros.
+           ++ subst. easy.
+           ++ subst. destruct o. destruct p. 
+              apply IHys with (r := r). easy. easy.
+              apply IHys with (r := r). easy. easy.
+Qed.
+
+Lemma subtype_monotone : monotone2 subtype. 
+Proof. unfold monotone2.
+       intros.
+       induction IN; intros.
+       - constructor. 
+       - constructor. apply mon_wfrec with (r := r); easy.
+       - constructor. apply mon_wfsend with (r := r); easy.
+Qed.
+
+Lemma subtype_send_inv_helper : forall pt s s0 l l0 xs ys,
+    subtypeC (ltt_send pt (Some (s, l) :: xs)) (ltt_send pt (Some (s0, l0) :: ys)) -> 
+    subtypeC l l0.
 Proof.
-  intros. punfold H0. inversion H0. easy. 
+  intros. 
+  pinversion H. subst.
+  simpl in H1.
+  destruct H1. destruct H1.
+  pclearbot.
+  unfold subtypeC. easy.
   apply subtype_monotone.
+Qed.
+
+Lemma subtype_send_inv : forall pt xs ys, subtypeC (ltt_send pt xs) (ltt_send pt ys) -> Forall2R (fun u v => (u = None) \/ (exists s s' t t', u = Some(s,t) /\ v = Some (s',t') /\ subsort s s' /\ subtypeC t t')) xs ys.
+Proof.
+  induction xs; intros.
+  - constructor.
+  - destruct ys; try easy.
+    pinversion H. subst. simpl in H1. destruct a. destruct p. easy. easy.
+    apply subtype_monotone.
+  constructor.
+  - destruct a. right. destruct p. destruct o. destruct p.
+    exists s. exists s0. exists l. exists l0. split; try easy. split; try easy.
+    split.
+    pinversion H. subst. simpl in H1. destruct H1. easy.
+    apply subtype_monotone.
+    specialize(subtype_send_inv_helper pt s s0 l l0 xs ys H); intros. easy.
+    pinversion H. subst. simpl in H1. easy.
+  - apply subtype_monotone.
+    left. easy.
+  - apply IHxs.
+    pinversion H. subst. 
+    pfold. constructor.
+    simpl in H1. 
+    destruct o. destruct p. destruct a. destruct p. destruct H1. destruct H1. easy. easy.
+    destruct a. destruct p. easy. easy.
+  - apply subtype_monotone.
 Qed.
 
 Lemma subtype_recv_inv_helper : forall pt s s0 l l0 xs ys,
@@ -364,45 +429,6 @@ Proof.
     pinversion H0. apply subtype_monotone.
 Qed.
 
-Lemma subtype_send_inv_helper : forall pt s s0 l l0 xs ys,
-    subtypeC (ltt_send pt (Some (s, l) :: xs)) (ltt_send pt (Some (s0, l0) :: ys)) -> 
-    subtypeC l l0.
-Proof.
-  intros. 
-  pinversion H. subst.
-  simpl in H1.
-  destruct H1. destruct H1.
-  pclearbot.
-  unfold subtypeC. easy.
-  apply subtype_monotone.
-Qed.
-
-Lemma subtype_send_inv : forall pt xs ys, subtypeC (ltt_send pt xs) (ltt_send pt ys) -> Forall2R (fun u v => (u = None) \/ (exists s s' t t', u = Some(s,t) /\ v = Some (s',t') /\ subsort s s' /\ subtypeC t t')) xs ys.
-Proof.
-  induction xs; intros.
-  - constructor.
-  - destruct ys; try easy.
-    pinversion H. subst. simpl in H1. destruct a. destruct p. easy. easy.
-    apply subtype_monotone.
-  constructor.
-  - destruct a. right. destruct p. destruct o. destruct p.
-    exists s. exists s0. exists l. exists l0. split; try easy. split; try easy.
-    split.
-    pinversion H. subst. simpl in H1. destruct H1. easy.
-    apply subtype_monotone.
-    specialize(subtype_send_inv_helper pt s s0 l l0 xs ys H); intros. easy.
-    pinversion H. subst. simpl in H1. easy.
-  - apply subtype_monotone.
-    left. easy.
-  - apply IHxs.
-    pinversion H. subst. 
-    pfold. constructor.
-    simpl in H1. 
-    destruct o. destruct p. destruct a. destruct p. destruct H1. destruct H1. easy. easy.
-    destruct a. destruct p. easy. easy.
-  - apply subtype_monotone.
-Qed.
-
 Lemma subtype_send : forall H pt xs, subtypeC (ltt_send pt xs) H -> (exists ys, 
                     H = ltt_send pt ys).
 Proof.
@@ -415,99 +441,116 @@ Proof.
     pinversion H0. subst. exists l. easy. apply subtype_monotone.
 Qed.
 
-Lemma stTrans_helper_recv : forall x x0 l r,
-      (forall l1 l2 l3 : ltt, subtypeC l1 l2 -> subtypeC l2 l3 -> r l1 l3) ->
-      Forall2R
-      (fun u v : option (sort * ltt) =>
-       u = None \/
-       (exists (s s' : sort) (t t' : ltt),
-          u = Some (s, t) /\ v = Some (s', t') /\ subsort s s' /\ subtypeC t' t)) x0 x ->
-      Forall2R
-       (fun u v : option (sort * ltt) =>
-        u = None \/
-        (exists (s s' : sort) (t t' : ltt),
-           u = Some (s, t) /\ v = Some (s', t') /\ subsort s s' /\ subtypeC t' t)) x l ->
-      wfrec subsort (upaco2 subtype r) x0 l.
-Proof.
-  induction x; intros; try easy.
-  destruct x0; try easy. 
-  destruct l; try easy. destruct x0; try easy.
-  inversion H0; subst. clear H0. inversion H1. subst. clear H1.
-  simpl.
-  destruct H5. 
-  - subst. destruct o. destruct p. apply IHx; try easy. apply IHx; try easy.
-  - destruct H0. destruct H0. destruct H0. destruct H0. destruct H0. destruct H1. destruct H2.
-    subst.
-    destruct H4; try easy. destruct H0. destruct H0. destruct H0. destruct H0. destruct H0. destruct H1. destruct H4.
-    inversion H0.
-    subst.
-    split. apply sstrans with (s2 := x5); try easy.
-    split. unfold upaco2. right. apply H with (l2 := x7); try easy. 
-    apply IHx; try easy.
-Qed. 
+Lemma extRecv: forall xs ys l r,
+  (forall l1 l2 l3 : ltt, subtypeC l1 l2 -> subtypeC l2 l3 -> r l1 l3) ->
+  wfrec subsort (upaco2 subtype bot2) xs ys ->
+  wfrec subsort (upaco2 subtype bot2) ys l ->
+  wfrec subsort (upaco2 subtype r) xs l.
+Proof. intro xs.
+       induction xs; intros.
+       - simpl. easy.
+       - case_eq l; intros.
+         + subst. simpl in H1. simpl. destruct a. destruct p. simpl in H0.
+           case_eq ys; intros. subst. easy. subst. destruct o. destruct p. simpl in H1. easy.
+           easy. simpl in H0.
+           case_eq ys; intros. subst. easy. subst. destruct o. destruct p. simpl in H1. easy.
+           simpl in H1. easy.
+         + subst. simpl.
+           destruct a. destruct p. destruct o. destruct p.
+           case_eq ys; intros. subst.
+           simpl in H0. easy.
+           subst. simpl in H0, H1. destruct o. destruct p.
+           destruct H0 as (Ha,(Hb,Hc)).
+           destruct H1 as (Hd,(He,Hf)).
+           split. apply sstrans with (s2 := s1). easy. easy.
+           split.
+           destruct Hb as [Hb | Hb]; destruct He as [He | He]. punfold Hb. punfold He.
+           right. apply H with (l2 := l3). pfold. easy. pfold. easy.
+           apply subtype_monotone. apply subtype_monotone.
+           easy. easy. easy.
+           apply IHxs with (ys := l2). easy. easy. easy.
+           easy.
+           case_eq ys; intros. subst. simpl in H0. easy.
+           subst. simpl in H0, H1.
+           destruct o. destruct p. easy. easy.
+           destruct o. destruct p. 
+           case_eq ys; intros. subst. simpl in H0. easy.
+           subst. simpl in H0, H1. destruct o. destruct p.
+           destruct H1 as (Ha,(Hb,Hc)). 
+           apply IHxs with (ys := l1). easy. easy. easy.
+           apply IHxs with (ys := l1). easy. easy. easy.
+           simpl in H0, H1.
+           case_eq ys; intros. subst. simpl in H0. easy.
+           subst. simpl in H1.
+           destruct o. destruct p. easy.
+           apply IHxs with (ys := l). easy. easy. easy.
+Qed.
 
-Lemma stTrans_helper_send : forall x x0 l r,
-      (forall l1 l2 l3 : ltt, subtypeC l1 l2 -> subtypeC l2 l3 -> r l1 l3) ->
-      Forall2R
-      (fun u v : option (sort * ltt) =>
-       u = None \/
-       (exists (s s' : sort) (t t' : ltt),
-          u = Some (s, t) /\ v = Some (s', t') /\ subsort s s' /\ subtypeC t t')) x x0 -> 
-      Forall2R
-       (fun u v : option (sort * ltt) =>
-        u = None \/
-        (exists (s s' : sort) (t t' : ltt),
-           u = Some (s, t) /\ v = Some (s', t') /\ subsort s s' /\ subtypeC t t')) l x ->
-      wfsend subsort (upaco2 subtype r) l x0.
-Proof.
-  induction x; intros; try easy.
-  destruct l; try easy.
-  destruct l; try easy. destruct x0; try easy.
-  inversion H0; subst. clear H0. inversion H1. subst. clear H1.
-  simpl.
-  destruct H5. 
-  - subst. destruct o. destruct p. destruct H4. easy. destruct H0. destruct H0. 
-    destruct H0. destruct H0. destruct H0. destruct H1. easy.
-    destruct o0. destruct p. apply IHx; try easy. apply IHx; try easy.
-  - destruct H0. destruct H0. destruct H0. destruct H0. destruct H0. destruct H1. destruct H2.
-    subst.
-    destruct H4. subst. apply IHx; try easy. 
-    destruct H0. destruct H0. destruct H0. destruct H0. destruct H0. destruct H1. destruct H4.
-    subst.
-    inversion H1. subst.
-    split. apply sstrans with (s2 := x6); try easy.
-    split. unfold upaco2. right. apply H with (l2 := x8); try easy.
-    apply IHx; try easy.
-Qed. 
+Lemma extSend: forall xs ys l r,
+  (forall l1 l2 l3 : ltt, subtypeC l1 l2 -> subtypeC l2 l3 -> r l1 l3) ->
+  wfsend subsort (upaco2 subtype bot2) xs ys ->
+  wfsend subsort (upaco2 subtype bot2) ys l ->
+  wfsend subsort (upaco2 subtype r) xs l.
+Proof. intro xs.
+       induction xs; intros.
+       - simpl. easy.
+       - case_eq l; intros.
+         + subst. simpl in H1. simpl. destruct a. destruct p. simpl in H0.
+           case_eq ys; intros. subst. easy. subst. destruct o. destruct p. simpl in H1. easy.
+           easy. simpl in H0.
+           case_eq ys; intros. subst. easy. subst. destruct o. destruct p. simpl in H1. easy.
+           simpl in H1. easy.
+         + subst. simpl.
+           destruct a. destruct p. destruct o. destruct p.
+           case_eq ys; intros. subst.
+           simpl in H0. easy.
+           subst. simpl in H0, H1. destruct o. destruct p.
+           destruct H0 as (Ha,(Hb,Hc)).
+           destruct H1 as (Hd,(He,Hf)).
+           split. apply sstrans with (s2 := s1). easy. easy.
+           split.
+           destruct Hb as [Hb | Hb]; destruct He as [He | He]. punfold Hb. punfold He.
+           right. apply H with (l2 := l3). pfold. easy. pfold. easy.
+           apply subtype_monotone. apply subtype_monotone.
+           easy. easy. easy.
+           apply IHxs with (ys := l2). easy. easy. easy.
+           easy.
+           case_eq ys; intros. subst. simpl in H0. easy.
+           subst. simpl in H0, H1.
+           destruct o. destruct p. easy. easy.
+           destruct o. destruct p. 
+           case_eq ys; intros. subst. simpl in H0. easy.
+           subst. simpl in H0, H1. destruct o. destruct p.
+           destruct H1 as (Ha,(Hb,Hc)). 
+           apply IHxs with (ys := l1). easy. easy. easy.
+           apply IHxs with (ys := l1). easy. easy. easy.
+           simpl in H0, H1.
+           case_eq ys; intros. subst. simpl in H0. easy.
+           subst. simpl in H1.
+           destruct o. destruct p. easy.
+           apply IHxs with (ys := l). easy. easy. easy.
+Qed.
 
 Lemma stTrans: forall l1 l2 l3, subtypeC l1 l2 -> subtypeC l2 l3 -> subtypeC l1 l3.
-  Proof.
+Proof.
     pcofix CIH. intros.
     pfold. case_eq l1; intros.
-    - subst. 
-      specialize(subtype_end l2 H0); intros. subst.
-      specialize(subtype_end l3 H1); intros. subst. apply sub_end.
-    - subst.
-      specialize(subtype_recv l2 s l H0); intros. destruct H. subst.
-      specialize(subtype_recv l3 s x H1); intros. destruct H. subst.
-      
-      specialize(subtype_recv_inv s x x0 H1); intros.
-      specialize(subtype_recv_inv s l x H0); intros.
-      
+    - subst. pinversion H0. pinversion H1. subst. constructor. 
+      subst. easy. subst. easy.
+      apply subtype_monotone. apply subtype_monotone.
+
+    - subst. pinversion H0. subst. pinversion H1. subst.
       constructor.
-      
-      apply stTrans_helper_recv with (x := x); try easy.
-      
-    - subst.
-      specialize(subtype_send l2 s l H0); intros. destruct H. subst.
-      specialize(subtype_send l3 s x H1); intros. destruct H. subst.
-      
-      specialize(subtype_send_inv s x x0 H1); intros.
-      specialize(subtype_send_inv s l x H0); intros.
-      
+      apply extRecv with (ys := ys). easy. easy. easy.
+      apply subtype_monotone. apply subtype_monotone.
+
+    - subst. pinversion H0. pinversion H1. subst. easy.
+      subst. easy. subst. inversion H6. subst.
       constructor.
-      apply stTrans_helper_send with (x := x); try easy.
+      apply extSend with (ys := ys). easy. easy. easy.
+      apply subtype_monotone. apply subtype_monotone.
 Qed.
+
 
 Lemma lttT_mon : monotone2 lttT.
 Proof.
