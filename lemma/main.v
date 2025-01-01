@@ -85,7 +85,7 @@ Proof.
         specialize(wfC_send H26 H22); try easy.
       - intros. specialize(Ht (Nat.succ n)). destruct Ht. inversion H26.
         subst. exists x2. easy.
-    - specialize(typ_after_step_3_helper_s M q p G G' l LP LQ S LT x (x0, x1)); intros.
+    - specialize(typ_after_step_3_helper_s M q p G G' l LP LQ); intros.
       inversion H4. subst. inversion H30. subst.
       specialize(Classical_Prop.not_or_and (q = p) (In p (flattenT M)) H29); intros. destruct H27.
       apply H26; try easy.

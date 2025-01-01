@@ -112,18 +112,15 @@ Proof.
     inversion H1; try easy.
 Qed.
 
-Lemma typ_after_step_3_helper_s : forall M p q G G' l L1 L2 S T xs y,
+Lemma typ_after_step_3_helper_s: forall M p q G G' l L1 L2,
     wfgC G ->
     wfgC G' ->
     projectionC G p (ltt_send q L1) -> 
-    subtypeC (ltt_send q (extendLis l (Datatypes.Some(S, T)))) (ltt_send q L1) ->
     projectionC G q (ltt_recv p L2) -> 
-    onth l xs = Some y ->
     ForallT
   (fun (u : string) (P : process) =>
    exists T : ltt,
      projectionC G u T /\ typ_proc nil nil P T /\ (forall n : fin, exists m : fin, guardP n m P)) M ->
-    subtypeC (ltt_recv p xs) (ltt_recv p L2) -> 
     gttstepC G G' p q l ->
     ~ InT q M ->
     ~ InT p M ->
@@ -133,28 +130,31 @@ Lemma typ_after_step_3_helper_s : forall M p q G G' l L1 L2 S T xs y,
      projectionC G' u T /\ typ_proc nil nil P T /\ (forall n : fin, exists m : fin, guardP n m P)) M.
 Proof.
   intro M. induction M; intros; try easy.
-  - unfold InT in *. simpl in H8. simpl in H9.
-    specialize(Classical_Prop.not_or_and (s = q) False H8); intros. destruct H10.
-    specialize(Classical_Prop.not_or_and (s = p0) False H9); intros. destruct H12.
-    clear H8 H9 H11 H13.
+  - unfold InT in *. simpl in H5. simpl in H6.
+    specialize(Classical_Prop.not_or_and (s = q) False H5); intros. destruct H7.
+    specialize(Classical_Prop.not_or_and (s = p0) False H6); intros. destruct H9.
+    clear H5 H6 H8 H10.
     constructor.
-    inversion H5. subst. destruct H9 as [T' H9]. destruct H9.
-    specialize(projection_step_label G G' p0 q l L1 L2 H H1 H3 H7); intros.
-    destruct H11. destruct H11. destruct H11. destruct H11. destruct H11.
+    inversion H3. subst. destruct H6 as [T' H6]. destruct H6.
+    specialize(projection_step_label G G' p0 q l L1 L2 H H1 H2 H4); intros.
+    destruct H8. destruct H8. destruct H8. destruct H8. destruct H8.
+    Check projection_step_label.
     specialize(typ_after_step_3_helper G G' p0 q s l L1 L2 x x1 x0 x2 T'); intros.
     assert(exists T'0 : ltt, projectionC G' s T'0 /\ T' = T'0).
-    apply H14; try easy.
-    clear H14. destruct H15. exists x3. split; try easy. destruct H14. rename x3 into Tl. subst. easy. 
-  - inversion H5. subst.
-    specialize(noin_cat_and q (flattenT M1) (flattenT M2) H8); intros.
-    specialize(noin_cat_and p (flattenT M1) (flattenT M2) H9); intros.
-    specialize(Classical_Prop.not_or_and (In q (flattenT M1)) (In q (flattenT M2)) H10); intros.
-    specialize(Classical_Prop.not_or_and (In p (flattenT M1)) (In p (flattenT M2)) H11); intros.
-    destruct H14. destruct H15.
+    apply H11; try easy.
+    clear H11. destruct H12. exists x3. split; try easy. destruct H11. rename x3 into Tl. subst. easy. 
+  - inversion H3. subst.
+    specialize(noin_cat_and q (flattenT M1) (flattenT M2) H5); intros.
+    specialize(noin_cat_and p (flattenT M1) (flattenT M2) H6); intros.
+    specialize(Classical_Prop.not_or_and (In q (flattenT M1)) (In q (flattenT M2)) H7); intros.
+    specialize(Classical_Prop.not_or_and (In p (flattenT M1)) (In p (flattenT M2)) H8); intros.
+    destruct H11. destruct H12.
     unfold InT in *.
-    specialize(IHM1 p q G G' l L1 L2 S T xs y H H0 H1 H2 H3 H4 H12 H6 H7 H14 H15).
-    specialize(IHM2 p q G G' l L1 L2 S T xs y H H0 H1 H2 H3 H4 H13 H6 H7 H16 H17).
+    specialize(IHM1 p q G G' l L1 L2 H H0 H1 H2).
+    specialize(IHM2 p q G G' l L1 L2 H H0 H1 H2).
     constructor; try easy.
+    apply IHM1; easy.
+    apply IHM2; easy.
 Qed.
 
 Lemma sub_red_helper : forall l xs x1 y,

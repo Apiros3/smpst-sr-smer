@@ -7,7 +7,6 @@ Import ListNotations.
 From SST Require Import src.header src.sim src.expr src.process src.local src.global src.balanced src.typecheck src.part src.gttreeh src.step src.merge src.projection. 
 From SST Require Import lemma.inversion lemma.inversion_expr lemma.substitution_helper lemma.substitution lemma.decidable_helper lemma.decidable lemma.expr lemma.part lemma.step lemma.projection_helper.
 
-
 Lemma canon_rep_s : forall G p q PT QT S T S' T' n, 
     wfgC G -> 
     projectionC G p (ltt_send q PT) -> 
