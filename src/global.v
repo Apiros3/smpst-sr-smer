@@ -424,4 +424,46 @@ Proof.
   constructor. inversion H3; try easy.
 Qed.
 
+(*translation example in the paper*)
+
+CoFixpoint tree_ex p q := gtt_send p q ([Some(sbool, tree_ex p q); Some(snat, gtt_end)]).
+Definition type_ex p q := g_rec (g_send p q [Some(sbool, g_var 0); Some(snat, g_end)]).
+
+Example ex9: forall p q,
+   gttTC (type_ex p q) (tree_ex p q).
+Proof. pcofix CIH.
+       intros.
+       rewrite(gtt_eq (tree_ex p q)). simpl.
+       pfold.
+       apply gttT_rec with (Q := ((g_send p q [Some (sbool, (g_rec (g_send p q [Some (sbool, g_var 0); Some (snat, g_end)]))); Some (snat, g_end)]))).
+       constructor.
+       constructor.
+       right.
+       exists sbool. exists (g_var 0). exists(g_rec (g_send p q [Some (sbool, g_var 0); Some (snat, g_end)])).
+       split. easy. split. easy.
+       constructor.
+       constructor.
+       right.
+       exists snat. exists g_end. exists g_end.
+       split. easy. split. easy. constructor.
+       constructor.
+
+       left.
+       pfold.
+       constructor.
+       constructor.
+       right.
+       exists sbool. exists(g_rec (g_send p q [Some (sbool, g_var 0); Some (snat, g_end)])).
+       exists(tree_ex p q).
+       split. easy. split. easy.
+       right.
+       apply CIH.
+
+       constructor.
+       right.
+       exists snat. exists g_end. exists gtt_end.
+       split. easy. split. easy. left. pfold. constructor.
+       constructor.
+Qed.
+
 End gtt.
