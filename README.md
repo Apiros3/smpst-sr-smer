@@ -1,7 +1,7 @@
 
 # Source Code
 
-**Title of the Submitted Paper:** Formalising Subject Reduction and Progress for Multiparty Session Processes (Replication)
+**Title of the Submitted Paper:** Formalising Subject Reduction and Progress for Multiparty Session Processes
 
 ---
 
