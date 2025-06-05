@@ -1,7 +1,7 @@
 
 # Source Code
 
-**Title of the Submitted Paper:** Formalising Subject Reduction and Progress for Multiparty Session Processes
+**Title of the Paper:** Formalising Subject Reduction and Progress for Multiparty Session Processes (at ITP 2025)
 
 ---
 
@@ -9,7 +9,7 @@
 
 1. **opam** – Package manager for OCaml  
    Install by following the instructions [here](https://opam.ocaml.org/doc/1.1/Quick_Install.html).
-2. **coqc 20.0** – Coq compiler  
+2. **coqc 8.20.0** – Coq compiler  
     - Run in the terminal: `opam pin add coq 8.20.0`
 3. **coqide** – Integrated development environment for Coq <br>
     - Run in the terminal: `opam install coqide`
