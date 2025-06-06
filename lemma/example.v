@@ -731,8 +731,313 @@ Proof. unfold G, TCarol.
        constructor.
        constructor.
 Qed.
+
+(*subtype*)
+
+Lemma stAlice: subtypeC TAlice T'Alice.
+Proof. unfold TAlice, T'Alice.
+       pfold.
+       constructor.
+       simpl. split. constructor.
+       split. left.
+       pfold. constructor.
+       simpl. split. constructor.
+       split. left.
+       pfold. constructor.
+       easy.
+       easy.
+Qed.
+
+(*typing*)
+
+Print process.
+Print expr.
+Print value.
+
+Definition PAlice := p_send "Bob" 0 (e_val (vnat 50)) (p_recv "Carol" [Some (p_inact)] ).
+
+Lemma TypAlice: typ_proc nil nil PAlice TAlice.
+Proof. unfold PAlice, TAlice.
+       specialize(tc_send nil nil "Bob" 0 (e_val (vnat 50)) (p_recv "Carol" [Some p_inact])
+       snat
+       ( ltt_recv "Carol" [Some (snat, ltt_end)])
+       ); intro HP.
+       simpl in HP.
+       apply HP.
+       constructor.
+       constructor. simpl. easy.
+       simpl. easy.
+       constructor.
+       right.
+       exists p_inact. exists snat. exists ltt_end.
+       split. easy. split. easy.
+       constructor.
+       constructor.
+Qed.
+
+Definition PBob := p_recv "Alice" [
+  Some(p_send "Carol" 0 (e_val (vnat 100)) (p_inact));
+  Some(p_send "Carol" 0 (e_val (vnat 2)) (p_inact))
+  ].
+
+Lemma TypBob: typ_proc nil nil PBob TBob.
+Proof. unfold PBob, TBob.
+       constructor.
+       simpl. easy.
+       simpl. easy.
+       constructor.
+       right.
+       exists(p_send "Carol" 0 (e_val (vnat 100)) p_inact).
+       exists snat.
+       exists(ltt_send "Carol" [Some (snat, ltt_end)]).
+       split. easy. split. easy.
+       specialize(tc_send [Some snat] nil "Carol" 0 (e_val (vnat 100)) p_inact
+       snat ltt_end
+       ); intro HP.
+       simpl in HP.
+       apply HP.
+       constructor.
+       constructor.
        
+       constructor.
+       right.
+       exists(p_send "Carol" 0 (e_val (vnat 2)) p_inact).
+       exists snat.
+       exists(ltt_send "Carol" [Some (snat, ltt_end)]).
+       split. easy. split. easy.
+       specialize(tc_send [Some snat] nil "Carol" 0 (e_val (vnat 2)) p_inact
+       snat ltt_end
+       ); intro HP.
+       simpl in HP.
+       apply HP.
+       constructor.
+       constructor.
+       constructor.
+Qed.
+
+Definition PCarol := p_recv "Bob" [Some (p_send "Alice" 0 (e_succ (e_var 0)) p_inact)].
+
+Lemma TypCarol: typ_proc nil nil PCarol TCarol.
+Proof. unfold PCarol, TCarol.
+       constructor.
+       simpl. easy. easy.
+       constructor.
+       right.
+       exists((p_send "Alice" 0 (e_succ (e_var 0)) p_inact) ).
+       exists snat.
+       exists(ltt_send "Alice" [Some (snat, ltt_end)]).
+       split. easy. split. easy.
+       specialize(tc_send [Some snat] nil "Alice" 0 (e_succ (e_var 0)) p_inact
+       snat ltt_end
+       ); intro HP.
+       simpl in HP.
+       apply HP. 
+       constructor.
+       constructor. simpl. easy.
+       constructor.
+       constructor.
+Qed.
+
+Print session.
+
+Definition M := s_par (s_ind "Alice" PAlice) (s_par (s_ind "Bob" PBob) (s_ind "Carol" PCarol)).
+
+Lemma TypM: typ_sess M G.
+Proof. constructor.
        
+       unfold G.
+       admit.
+       admit.
+       
+       unfold M.
+       simpl.
+       constructor.
+       intro H.
+       inversion H. easy. inversion H0. easy. easy.
+       constructor.
+       intro H.
+       inversion H. easy. easy.
+       constructor.
+       intro H. inversion H. constructor.
+     
+       
+       unfold G, M.
+       constructor.
+       constructor.
+       exists T'Alice.
+       split.
+       apply GPAlice.
+       split.
+       apply tc_sub with (t := TAlice).
+       apply TypAlice.
+       apply stAlice.
+       
+       unfold T'Alice.
+       unfold wfC.
+       exists(l_send "Bob"
+         [Some (snat, l_recv "Carol" [Some (snat, l_end)]);
+          Some (snat, l_recv "Carol" [Some (snat, l_end)])]) .
+       split.
+       pfold.
+       constructor.
+       constructor.
+       right.
+       exists snat.
+       exists(l_recv "Carol" [Some (snat, l_end)]).
+       exists(ltt_recv "Carol" [Some (snat, ltt_end)]).
+       split. easy. split. easy.
+       left. pfold. 
+       constructor.
+       constructor.
+       right.
+       exists snat. exists l_end. exists ltt_end.
+       split. easy. split. easy.
+       left. pfold. constructor.
+       constructor.
+       constructor.
+       right.
+       exists snat.
+       exists(l_recv "Carol" [Some (snat, l_end)]).
+       exists(ltt_recv "Carol" [Some (snat, ltt_end)]).
+       split. easy. split. easy.
+       left. pfold. 
+       constructor.
+       constructor.
+       right.
+       exists snat. exists l_end. exists ltt_end.
+       split. easy. split. easy.
+       left. pfold. constructor.
+       constructor.
+       constructor.
+       
+       split.
+       constructor. simpl. easy.
+       constructor.
+       right.
+       exists snat.
+       exists(l_recv "Carol" [Some (snat, l_end)]).
+       split. easy.
+       constructor. easy. constructor.
+       right. exists snat. exists l_end. split. easy. constructor.
+       constructor.
+       constructor.
+       right. 
+       exists snat.
+       exists(l_recv "Carol" [Some (snat, l_end)]).
+       split. easy.
+       constructor. easy. constructor.
+       right. exists snat. exists l_end. split. easy. constructor.
+       constructor.
+       constructor.
+       
+       intro n.
+       exists 0.
+       destruct n; constructor.
+       constructor.
+       right. 
+       exists snat.
+       exists(l_recv "Carol" [Some (snat, l_end)]).
+       split. easy.
+       destruct n; constructor.
+       constructor.
+       right. exists snat. exists l_end. split. easy. constructor.
+       constructor.
+       constructor.
+       right.
+       exists snat.
+       exists(l_recv "Carol" [Some (snat, l_end)]).
+       split. easy.
+       destruct n; constructor.
+       constructor.
+       right. exists snat. exists l_end. split. easy. constructor.
+       constructor.
+       constructor.
+       
+       intro n.
+       unfold PAlice.
+       exists 0.
+       destruct n; constructor.
+       destruct n; constructor.
+       constructor.
+       right. exists p_inact. split. easy. constructor.
+       constructor.
+         
+       constructor.
+       constructor.
+       exists TBob.
+       split.
+       apply GPBob.
+       split.
+       apply TypBob.
+       
+       intro n.
+       exists 0. unfold PBob.
+       destruct n; constructor.
+       constructor.
+       right.
+       exists((p_send "Carol" 0 (e_val (vnat 100)) p_inact) ).
+       split. easy.
+       destruct n; constructor.
+       constructor.
+       constructor.
+       right.
+       exists((p_send "Carol" 0 (e_val (vnat 2)) p_inact) ).
+       split. easy.
+       destruct n; constructor.
+       constructor.
+       constructor.
+       
+       constructor.
+       exists TCarol.
+       split.
+       apply GPCarol.
+       split.
+       apply TypCarol.
+       
+       intro n.
+       unfold PCarol.
+       exists 0.
+       destruct n; constructor.
+       constructor.
+       right.
+       exists((p_send "Alice" 0 (e_succ (e_var 0)) p_inact) ).
+       split. easy.
+       destruct n; constructor.
+       constructor.
+       constructor.
+Admitted.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
        
