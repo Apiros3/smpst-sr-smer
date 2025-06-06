@@ -22,6 +22,11 @@ Definition T'Alice := ltt_send "Bob" [
 
 Definition TCarol := ltt_recv "Bob" [Some (snat, ltt_send "Alice" [Some (snat, ltt_end)])].
 
+Definition TBob := ltt_recv "Alice" [
+  Some(snat, ltt_send "Carol" [Some(snat, ltt_end)]);
+  Some(snat, ltt_send "Carol" [Some(snat, ltt_end)])
+  ].
+
 Lemma no_part_end: forall p,
   isgPartsC p (gtt_end) -> False.
 Proof. intros.
@@ -32,6 +37,21 @@ Proof. intros.
        pinversion Ha.
        apply gttT_mon.
 Qed. 
+
+Lemma no_part_send: forall p q r,
+  p <> r ->
+  q <> r ->
+  isgPartsC r (gtt_send p q [Some (snat, gtt_end)]) -> False.
+Proof. intros.
+       apply part_cont in H1; try easy.
+       destruct H1 as (n,(s,(g,(Hg1,Hg2)))).
+       destruct n. simpl in Hg1.
+       inversion Hg1. subst.
+       apply no_part_end in Hg2. easy.
+       simpl in Hg1.
+       destruct n. simpl in Hg1. easy. simpl in Hg1. easy.
+Qed.
+
 
 Lemma GPAlice: projectionC G "Alice" T'Alice.
 Proof. unfold G, T'Alice.
@@ -253,6 +273,219 @@ Proof. unfold G, T'Alice.
        apply no_part_end.
        constructor.
        constructor.
+       constructor.
+       constructor.
+Qed.
+
+Lemma GPBob: projectionC G "Bob" TBob.
+Proof. unfold G, TBob.
+       pfold. constructor.
+       easy.
+       (**)
+       unfold isgPartsC.
+       exists((g_send "Alice" "Bob"
+         [Some (snat, g_send "Bob" "Carol" [Some (snat, g_send "Carol" "Alice" [Some (snat, g_end)])]);
+          Some (snat, g_send "Bob" "Carol" [Some (snat, g_send "Carol" "Alice" [Some (snat, g_end)])])])).
+       split.
+       pfold. constructor.
+       constructor. right.
+       exists snat.
+       exists(g_send "Bob" "Carol" [Some (snat, g_send "Carol" "Alice" [Some (snat, g_end)])]).
+       exists(gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+       split. easy. split. easy.
+       left. pfold.
+       constructor.
+       constructor.
+       right.
+       exists snat.
+       exists(g_send "Carol" "Alice" [Some (snat, g_end)]).
+       exists( gtt_send "Carol" "Alice" [Some (snat, gtt_end)]).
+       split. easy. split. easy.
+       left. pfold.
+       constructor.
+       constructor.
+       right.
+       exists snat. exists g_end. exists gtt_end.
+       split. easy. split. easy.
+       left. pfold. constructor.
+       constructor.
+       constructor.
+       constructor.
+       right.
+       exists snat.
+       exists( g_send "Bob" "Carol" [Some (snat, g_send "Carol" "Alice" [Some (snat, g_end)])]).
+       exists(gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+       split. easy. split. easy.
+       left. pfold. 
+       constructor.
+       constructor.
+       right.
+       exists snat.
+       exists(g_send "Carol" "Alice" [Some (snat, g_end)]).
+       exists( gtt_send "Carol" "Alice" [Some (snat, gtt_end)]).
+       split. easy. split. easy.
+       left. pfold.
+       constructor.
+       constructor.
+       right.
+       exists snat. exists g_end. exists gtt_end.
+       split. easy. split. easy.
+       left. pfold. constructor.
+       constructor.
+       constructor.
+       constructor.
+       
+       split.
+       intro n.
+       exists 0.
+       destruct n; constructor.
+       constructor.
+       right.
+       exists snat.
+       exists( g_send "Bob" "Carol" [Some (snat, g_send "Carol" "Alice" [Some (snat, g_end)])]).
+       split. easy.
+       destruct n; constructor.
+       constructor.
+       right.
+       exists snat.
+       exists(g_send "Carol" "Alice" [Some (snat, g_end)]).
+       split. easy.
+       destruct n; constructor.
+       constructor.
+       right.
+       exists snat.
+       exists(g_end). split. easy. constructor.
+       constructor. constructor. 
+       constructor.
+       right.
+       exists snat.
+       exists( g_send "Bob" "Carol" [Some (snat, g_send "Carol" "Alice" [Some (snat, g_end)])]).
+       split. easy.
+       destruct n; constructor.
+       constructor.
+       right.
+       exists snat.
+       exists(g_send "Carol" "Alice" [Some (snat, g_end)]).
+       split. easy.
+       destruct n; constructor.
+       constructor.
+       right.
+       exists snat.
+       exists(g_end). split. easy. constructor.
+       constructor. constructor. 
+       constructor.
+       constructor.
+       (**)
+       constructor.
+       right.
+       exists snat.
+       exists(gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+       exists(ltt_send "Carol" [Some (snat, ltt_end)]).
+       split. easy. split. easy.
+       left. pfold.
+       constructor.
+       easy.
+       
+       unfold isgPartsC.
+       exists((g_send "Bob" "Carol" [Some (snat, g_send "Carol" "Alice" [Some (snat, g_end)])]) ).
+       split.
+       pfold. constructor.
+       constructor.
+       right.
+       exists snat.
+       exists(g_send "Carol" "Alice" [Some (snat, g_end)]).
+       exists(gtt_send "Carol" "Alice" [Some (snat, gtt_end)]).
+       split. easy. split. easy.
+       left. pfold. constructor.
+       constructor.
+       right.
+       exists snat.
+       exists g_end.
+       exists gtt_end.
+       split. easy. split. easy. left. pfold. constructor.
+       constructor. constructor.
+       split.
+       intro n.
+       exists 0.
+       destruct n; constructor.
+       constructor. right.
+       exists snat.
+       exists(g_send "Carol" "Alice" [Some (snat, g_end)]).
+       split. easy.
+       destruct n; constructor.
+       constructor. right.
+       exists snat.
+       exists(g_end).
+       split. easy. constructor.
+       constructor. constructor.
+       constructor.
+       (**)
+
+       constructor.
+       right.
+       exists snat.
+       exists (gtt_send "Carol" "Alice" [Some (snat, gtt_end)]).
+       exists ltt_end.
+       split. easy. split. easy.
+       left. pfold.
+       constructor.
+       apply no_part_send; easy.
+       constructor.
+       
+       constructor.
+       right.
+       exists snat.
+       exists( gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+       exists(ltt_send "Carol" [Some (snat, ltt_end)]).
+       split. easy. split. easy.
+       left. pfold.
+       constructor.
+       easy.
+       
+       (**)
+       unfold isgPartsC.
+       exists(g_send "Bob" "Carol" [Some (snat, g_send "Carol" "Alice" [Some (snat, g_end)])]).
+       split.
+       pfold. constructor.
+       constructor. right.
+       exists snat.
+       exists(g_send "Carol" "Alice" [Some (snat, g_end)]).
+       exists(gtt_send "Carol" "Alice" [Some (snat, gtt_end)]).
+       split. easy. split. easy.
+       left. pfold. constructor.
+       constructor.
+       right.
+       exists snat.
+       exists g_end.
+       exists gtt_end.
+       split. easy. split. easy.
+       left. pfold. constructor.
+       constructor.
+       constructor.
+       split.
+       intro n.
+       exists 0.
+       destruct n; constructor.
+       constructor. right.
+       exists snat.
+       exists(g_send "Carol" "Alice" [Some (snat, g_end)]).
+       split. easy.
+       destruct n; constructor.
+       constructor. right.
+       exists snat.
+       exists(g_end).
+       split. easy. constructor.
+       constructor. constructor.
+       constructor.
+
+       constructor.
+       right.
+       exists snat.
+       exists( gtt_send "Carol" "Alice" [Some (snat, gtt_end)]).
+       exists(ltt_end). split. easy. split. easy.
+       left. pfold.
+       constructor.
+       apply no_part_send; easy.
        constructor.
        constructor.
 Qed.
