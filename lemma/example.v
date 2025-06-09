@@ -194,7 +194,6 @@ Proof. unfold G, T'Alice.
        constructor.
        right. exists snat. exists g_end. split. easy. constructor.
        constructor. constructor.
-       Print isgParts.
        apply pa_sendr with (n := 0) (s := snat) (g := g_send "Carol" "Alice" [Some (snat, g_end)]). easy. easy.
        simpl. easy.
        constructor.
@@ -850,8 +849,6 @@ Proof. unfold PCarol, TCarol.
        constructor.
 Qed.
 
-Print session.
-
 Definition M := s_par (s_par (s_ind "Alice" PAlice) (s_ind "Bob" PBob)) (s_ind "Carol" PCarol).
 
 Lemma pwf: forall pt : string, isgPartsC pt G -> InT pt M.
@@ -882,8 +879,957 @@ Proof. intros.
          destruct n. simpl in Ha. easy. simpl in Ha. easy.
 Qed.
 
+
+Lemma endP: forall w, gttmap G w None gnode_end ->
+  w = [0;0;0] \/ w = [1;0;0].
+Proof. intros.
+       inversion H. subst.
+       case_eq n; intros.
+       - subst. simpl in H6.
+         inversion H6. subst.
+         inversion H7. subst.
+         case_eq n; intros.
+         + subst. simpl in H8.
+           inversion H8. subst.
+           inversion H9. subst.
+           case_eq n; intros.
+           ++ subst. simpl in H10. inversion H10. subst.
+              inversion H11. subst. left. easy.
+           ++ subst. simpl in H10. 
+              destruct n0; simpl in H10; easy.
+         + subst. simpl in H8.
+           destruct n0; simpl in H8; easy.
+      - subst. simpl in H6.
+        case_eq n0; intros.
+        + subst. simpl in H6. 
+          inversion H6. subst.
+          inversion H7. subst.
+          case_eq n; intros.
+          ++ subst. simpl in H8.
+             inversion H8. subst.
+             inversion H9. subst.
+             case_eq n; intros.
+             * subst. simpl in H10.
+               inversion H10. subst. 
+               inversion H11. subst. right. easy.
+             * subst. simpl in H10.
+               destruct n0; simpl in H10; easy.
+          ++ subst. simpl in H8.
+             destruct n0; simpl in H8; easy.
+        + subst. simpl in H6.
+          destruct n; simpl in H6; easy.
+Qed.
+
+Lemma spq: forall w p q, gttmap G w None (gnode_pq p q) ->
+  (w = [] /\ p = "Alice"%string /\ q = "Bob"%string) \/ 
+  (w = [0] /\ p = "Bob"%string /\ q = "Carol"%string) \/ 
+  (w = [1] /\ p = "Bob"%string /\ q = "Carol"%string) \/
+  (w = [0;0] /\ p = "Carol"%string /\ q = "Alice"%string) \/ 
+  (w = [1;0] /\ p = "Carol"%string /\ q = "Alice"%string).
+Proof. intros.
+       inversion H.
+       - subst. left. easy.
+       - subst. 
+         case_eq n; intros.
+         + subst. simpl in H6.
+           inversion H6. subst.
+           inversion H7. subst.
+           right. left. easy.
+           subst.
+           case_eq n; intros.
+           ++ subst. simpl in H8.
+              inversion H8. subst. 
+              inversion H9. subst. 
+              right. right. right. left. easy.
+              subst.
+              case_eq n; intros.
+              * subst. simpl in H10. inversion H10. subst.
+                inversion H11.
+              * subst. simpl in H10.
+                destruct n0; simpl in H10; easy.
+           ++ subst. simpl in H8.
+              destruct n0; simpl in H8; easy.
+         + subst.
+           simpl in H6.
+           case_eq n0; intros.
+           ++ subst. simpl in H6.
+              inversion H6. subst.
+              inversion H7. subst.
+              right. right. left. easy.
+              subst.
+              case_eq n; intros.
+              * subst. simpl in H8.
+                inversion H8. subst. 
+                inversion H9. subst.
+                right. right. right. right. easy.
+              * subst.
+                case_eq n; intros.
+                ** subst. simpl in H10. inversion H10. subst.
+                   inversion H11.
+                ** subst. simpl in H10.
+                   destruct n0; simpl in H10; easy.
+           ++ subst. simpl in H8.
+              destruct n0; simpl in H8; easy.
+         + subst. simpl in H6.
+           destruct n; simpl in H7; easy.
+Qed.
+
+Lemma spqn: forall n l p q, gttmap G (n :: l) None (gnode_pq p q) -> 
+  (n = 0 /\ ((l = [] /\ p = "Bob"%string /\ q = "Carol"%string) \/ (l = [0] /\ p = "Carol"%string /\ q = "Alice"%string))) \/
+  (n = 1 /\ ((l = [] /\ p = "Bob"%string /\ q = "Carol"%string) \/ (l = [0] /\ p = "Carol"%string /\ q = "Alice"%string))).
+Proof. intros.
+       case_eq n; intros.
+       - subst. left.
+         inversion H. subst.
+         simpl in H7. inversion H7.
+         subst. split. easy.
+         inversion H8. subst. left. easy.
+         subst. 
+         case_eq n; intros.
+         + subst. simpl in H6. inversion H6. subst.
+           inversion H9. subst.
+           right. easy.
+           subst.
+           case_eq n; intros.
+           ++ subst. simpl in H10. inversion H10. subst.
+              inversion H11.
+           ++ subst. simpl in H10.
+              destruct n0; simpl in H10; easy.
+        + subst. simpl in H6.
+          destruct n0; simpl in H6; easy.
+       - subst. simpl. right.
+         case_eq n0; intros.
+         + subst. split. easy.
+           inversion H. subst.
+           simpl in H7. inversion H7. subst.
+           inversion H8. subst. left. easy.
+           subst. 
+           case_eq n; intros.
+           ++ right. subst. simpl in H6.
+              inversion H6. subst.
+              inversion H9. subst. easy.
+              subst. 
+              case_eq n; intros.
+              * subst. simpl in H10. inversion H10. subst.
+                inversion H11.
+              * subst. simpl in H10.
+                destruct n0; simpl in H10; easy.
+            ++ subst. simpl in H6. 
+               destruct n0; simpl in H6; easy.
+        - subst. inversion H.
+          subst.
+          case_eq n; subst; simpl in H7.
+          destruct n; easy.
+          destruct n; easy.
+Qed.
+
+Lemma blen1: forall w t, length w = 1 -> gttmap G w None t ->
+  (w = [0] /\ t = gnode_pq "Bob"%string "Carol"%string) \/
+  (w = [1] /\ t = gnode_pq "Bob"%string "Carol"%string).
+Proof. intros.
+       inversion H0.
+       subst. easy.
+       subst.
+       case_eq n; intros.
+       + subst. simpl in H7. inversion H7. subst.
+         inversion H8. subst. left. easy.
+       + subst.
+         case_eq n; intros.
+         ++ subst. simpl in H9. inversion H9. subst.
+            easy.
+         ++ easy.
+       subst. simpl in H7.
+       case_eq n0; intros.
+       + subst. simpl in H7.
+         inversion H7. subst.
+         inversion H8. subst.
+         right. easy.
+       + subst. easy.
+       subst.
+       simpl in H7.
+       destruct n; simpl in H7; easy.
+Qed.
+
+Lemma blen2: forall w t, length w = 2 -> gttmap G w None t ->
+  (w = [0;0] /\ t = gnode_pq "Carol"%string "Alice"%string) \/
+  (w = [1;0] /\ t = gnode_pq "Carol"%string "Alice"%string).
+Proof. intros.
+       inversion H0.
+       subst. easy.
+       subst.
+       case_eq n; intros.
+       + subst. simpl in H7. inversion H7. subst.
+         inversion H8. subst. left. easy.
+       + subst.
+         case_eq n; intros.
+         ++ subst. simpl in H9. inversion H9. subst.
+            inversion H10. subst.
+            left. easy.
+            subst. easy.
+         ++ subst. simpl in H9.
+            destruct n0; simpl in H9; easy.
+         subst. simpl in H7.
+         right.
+       case_eq n0; intros.
+       + subst. simpl in H7.
+         inversion H7. subst.
+         inversion H8. subst. easy.
+         subst. 
+         case_eq n; intros.
+         ++ subst. simpl in H9. inversion H9. subst.
+            inversion H10. subst. easy.
+            subst. 
+            case_eq n; intros.
+            +++ subst. simpl in H11. inversion H11. subst.
+                easy.
+            +++ subst. easy.
+          ++ subst. simpl in H9. 
+             destruct n0 in H9; easy.
+             subst.
+             simpl in H7.
+             destruct n; easy.
+Qed.
+
+Lemma bnil: forall {A: Type} (w1 w2: list A), w1 ++ w2 = [] -> w1 = [] /\ w2 = [].
+Proof. intros A w1.
+       induction w1; intros.
+       - simpl in H. subst. easy.
+       - simpl in H. easy.
+Qed.
+
+Lemma onenil: forall {A: Type} w1 w2 (a: A), w1 ++ w2 = [a] -> (w1 = [a] /\ w2 = []) \/ (w1 = [] /\ w2 = [a]).
+Proof. intros a w1.
+       induction w1; intros.
+       - simpl in H. simpl. right. easy.
+       - simpl in H.
+         inversion H. subst.
+         apply bnil in H2.
+         destruct H2 as (H2a,H2b). subst.
+         simpl. left. easy.
+Qed.
+
 Lemma balG: balancedG G.
-Proof. Admitted.
+Proof. unfold balancedG.
+       intros.
+       inversion H.
+       - subst. simpl in H0. simpl.
+         destruct H0 as [H0 | H0].
+         + apply spq in H0.
+           destruct H0 as [(Ha1,(Ha2,Ha3)) | [(Ha1,(Ha2,Ha3)) | [(Ha1,(Ha2,Ha3))| [(Ha1,(Ha2,Ha3)) | (Ha1,(Ha2,Ha3))]]]].
+           ++ subst.
+              exists 0.
+              intros.
+              destruct H0 as [H0 | H0].
+              * apply endP in H0.
+                destruct H0 as [H0 | H0].
+                ** subst. exists []. exists [0;0;0].
+                   simpl. split. easy.
+                   exists "Bob"%string.
+                   left. easy.
+                ** subst. exists []. exists [1;0;0].
+                   simpl. split. easy.
+                   exists "Bob"%string.
+                   left. easy.
+                destruct H0 as (Ha,(t,Hb)).
+                assert (w' = []).
+                { apply length_zero_iff_nil. easy. } 
+                subst.
+                exists []. exists []. 
+                split. easy. 
+                exists "Bob"%string.
+                left. easy.
+           ++ exists 1.
+              intros.
+              destruct H0 as [H0 | H0].
+              * apply endP in H0.
+                destruct H0 as [H0 | H0].
+                ** rewrite H0. exists [0]. exists [0;0].
+                   simpl. split. easy.
+                   exists "Carol"%string.
+                   left. unfold G.
+                   apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                   simpl. easy.
+                   rewrite Ha2.
+                   constructor.
+                ** exists [1]. exists [0;0].
+                   simpl. split. easy.
+                   exists "Carol"%string.
+                   left. unfold G.
+                   apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                   simpl. easy.
+                   rewrite Ha2.
+                   constructor.
+                   destruct H0 as (Ha,(t,Hb)).
+                   specialize(blen1 w'0 t Ha Hb); intro HH.
+                   destruct HH as [(HHa,HHb) | (HHa,HHb)].
+                   *** subst. exists [0]. exists [].
+                       split. easy. exists "Carol"%string. 
+                       left. easy.
+                   *** subst.  exists [1]. exists [].
+                       split. easy. exists "Carol"%string. 
+                       left. easy.
+           ++ subst.
+              exists 1.
+              intros.
+              destruct H0 as [H0 | H0].
+              * apply endP in H0.
+                destruct H0 as [H0 | H0].
+                ** rewrite H0. exists [0]. exists [0;0].
+                   simpl. split. easy.
+                   exists "Carol"%string.
+                   left. unfold G.
+                   apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                   simpl. easy.
+                   constructor.
+                ** exists [1]. exists [0;0].
+                   simpl. split. easy.
+                   exists "Carol"%string.
+                   left. unfold G.
+                   apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                   simpl. easy.
+                   constructor.
+                   destruct H0 as (Ha,(t,Hb)).
+                   specialize(blen1 w' t Ha Hb); intro HH.
+                   destruct HH as [(HHa,HHb) | (HHa,HHb)].
+                   *** subst. exists [0]. exists [].
+                       split. easy. exists "Carol"%string. 
+                       left. easy.
+                   *** subst.  exists [1]. exists [].
+                       split. easy. exists "Carol"%string. 
+                       left. easy.
+             ++ subst.
+                exists 1.
+                intros.
+                destruct H0 as [H0 | H0].
+                * apply endP in H0.
+                  destruct H0 as [H0 | H0].
+                  ** exists [0;0]. exists [0].
+                     simpl. split. easy.
+                     exists "Alice"%string.
+                     left. 
+                     unfold G.
+                     apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                     simpl. easy.
+                     apply gmap_con with (st := snat) (gk :=  gtt_send "Carol" "Alice" [Some (snat, gtt_end)]).
+                     simpl. easy.
+                     constructor.
+                  ** exists [1;0]. exists [0].
+                     simpl. split. easy.
+                     exists "Alice"%string.
+                     left. 
+                     unfold G.
+                     apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                     simpl. easy.
+                     apply gmap_con with (st := snat) (gk :=  gtt_send "Carol" "Alice" [Some (snat, gtt_end)]).
+                     simpl. easy.
+                     constructor.
+                * destruct H0 as (Ha,(t,Hb)).
+                   specialize(blen1 w' t Ha Hb); intro HH.
+                   destruct HH as [(HHa,HHb) | (HHa,HHb)].
+                   *** subst. exists [0]. exists [].
+                       split. easy. exists "Bob"%string. 
+                       right. easy.
+                   *** subst.  exists [1]. exists [].
+                       split. easy. exists "Bob"%string. 
+                       right. easy.
+             ++ exists 2. subst.
+                intros.
+                destruct H0 as [H0 | H0].
+                * apply endP in H0.
+                  destruct H0 as [H0 | H0].
+                  ** exists [0;0]. exists [0].
+                     simpl. split. easy.
+                     exists "Alice"%string.
+                     left.
+                     apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                     simpl. easy.
+                     apply gmap_con with (st := snat) (gk :=  gtt_send "Carol" "Alice" [Some (snat, gtt_end)]).
+                     simpl. easy.
+                     constructor.
+                  ** exists [1;0]. exists [0].
+                     simpl. split. easy.
+                     exists "Alice"%string.
+                     left. 
+                     unfold G.
+                     apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                     simpl. easy.
+                     apply gmap_con with (st := snat) (gk :=  gtt_send "Carol" "Alice" [Some (snat, gtt_end)]).
+                     simpl. easy.
+                     constructor.
+                 * destruct H0 as (Ha,(t,Hb)).
+                   specialize(blen2 w' t Ha Hb); intro HH.
+                   destruct HH as [(HHa,HHb) | (HHa,HHb)].
+                   ** subst. exists [0;0]. exists [].
+                      simpl. split. easy.
+                      exists "Alice"%string. left. easy.
+                   ** subst. exists [1;0]. exists [].
+                      simpl. split. easy.
+                      exists "Alice"%string. left. easy.
+         + apply spq in H0.
+           destruct H0 as [(Ha1,(Ha2,Ha3)) | [(Ha1,(Ha2,Ha3)) | [(Ha1,(Ha2,Ha3))| [(Ha1,(Ha2,Ha3)) | (Ha1,(Ha2,Ha3))]]]].
+           ++ subst.
+              exists 0.
+              intros.
+              destruct H0 as [H0 | H0].
+              * apply endP in H0.
+                destruct H0 as [H0 | H0].
+                ** subst. exists []. exists [0;0;0].
+                   simpl. split. easy.
+                   exists "Alice"%string.
+                   right. easy.
+                ** subst. exists []. exists [1;0;0].
+                   simpl. split. easy.
+                   exists "Alice"%string.
+                   right. easy.
+                destruct H0 as (Ha,(t,Hb)).
+                assert (w' = []).
+                { apply length_zero_iff_nil. easy. } 
+                subst.
+                exists []. exists []. 
+                split. easy. 
+                exists "Alice"%string.
+                right. easy.
+           ++ exists 1.
+              intros.
+              destruct H0 as [H0 | H0].
+              * apply endP in H0.
+                destruct H0 as [H0 | H0].
+                ** rewrite H0. exists [0]. exists [0;0].
+                   simpl. split. easy.
+                   exists "Bob"%string.
+                   right. unfold G.
+                   apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                   simpl. easy.
+                   subst.
+                   constructor.
+                ** exists [1]. exists [0;0].
+                   simpl. split. easy.
+                   exists "Bob"%string.
+                   right. unfold G.
+                   apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                   simpl. easy.
+                   subst.
+                   constructor.
+                   destruct H0 as (Ha,(t,Hb)).
+                   specialize(blen1 w'0 t Ha Hb); intro HH.
+                   destruct HH as [(HHa,HHb) | (HHa,HHb)].
+                   *** subst. exists [0]. exists [].
+                       split. easy. exists "Bob"%string. 
+                       right. easy.
+                   *** subst.  exists [1]. exists [].
+                       split. easy. exists "Bob"%string. 
+                       right. easy.
+           ++ subst.
+              exists 1.
+              intros.
+              destruct H0 as [H0 | H0].
+              * apply endP in H0.
+                destruct H0 as [H0 | H0].
+                ** rewrite H0. exists [0]. exists [0;0].
+                   simpl. split. easy.
+                   exists "Bob"%string.
+                   right. unfold G.
+                   apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                   simpl. easy.
+                   constructor.
+                ** exists [1]. exists [0;0].
+                   simpl. split. easy.
+                   exists "Bob"%string.
+                   right. unfold G.
+                   apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                   simpl. easy.
+                   constructor.
+                   destruct H0 as (Ha,(t,Hb)).
+                   specialize(blen1 w' t Ha Hb); intro HH.
+                   destruct HH as [(HHa,HHb) | (HHa,HHb)].
+                   *** subst. exists [0]. exists [].
+                       split. easy. exists "Bob"%string. 
+                       right. easy.
+                   *** subst.  exists [1]. exists [].
+                       split. easy. exists "Bob"%string. 
+                       right. easy.
+             ++ subst.
+                exists 1.
+                intros.
+                destruct H0 as [H0 | H0].
+                * apply endP in H0.
+                  destruct H0 as [H0 | H0].
+                  ** exists [0;0]. exists [0].
+                     simpl. split. easy.
+                     exists "Carol"%string.
+                     right. 
+                     unfold G.
+                     apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                     simpl. easy.
+                     apply gmap_con with (st := snat) (gk :=  gtt_send "Carol" "Alice" [Some (snat, gtt_end)]).
+                     simpl. easy.
+                     constructor.
+                  ** exists [1;0]. exists [0].
+                     simpl. split. easy.
+                     exists "Carol"%string.
+                     right. 
+                     unfold G.
+                     apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                     simpl. easy.
+                     apply gmap_con with (st := snat) (gk :=  gtt_send "Carol" "Alice" [Some (snat, gtt_end)]).
+                     simpl. easy.
+                     constructor.
+                * destruct H0 as (Ha,(t,Hb)).
+                   specialize(blen1 w' t Ha Hb); intro HH.
+                   destruct HH as [(HHa,HHb) | (HHa,HHb)].
+                   *** subst. exists []. exists [0].
+                       split. easy. exists "Bob"%string. 
+                       left. easy.
+                   *** subst.  exists []. exists [1].
+                       split. easy. exists "Bob"%string. 
+                       left. easy.
+             ++ exists 2. subst.
+                intros.
+                destruct H0 as [H0 | H0].
+                * apply endP in H0.
+                  destruct H0 as [H0 | H0].
+                  ** exists [0;0]. exists [0].
+                     simpl. split. easy.
+                     exists "Carol"%string.
+                     right.
+                     apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                     simpl. easy.
+                     apply gmap_con with (st := snat) (gk :=  gtt_send "Carol" "Alice" [Some (snat, gtt_end)]).
+                     simpl. easy.
+                     constructor.
+                  ** exists [1;0]. exists [0].
+                     simpl. split. easy.
+                     exists "Carol"%string.
+                     right. 
+                     unfold G.
+                     apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                     simpl. easy.
+                     apply gmap_con with (st := snat) (gk :=  gtt_send "Carol" "Alice" [Some (snat, gtt_end)]).
+                     simpl. easy.
+                     constructor.
+                 * destruct H0 as (Ha,(t,Hb)).
+                   specialize(blen2 w' t Ha Hb); intro HH.
+                   destruct HH as [(HHa,HHb) | (HHa,HHb)].
+                   ** subst. exists [0;0]. exists [].
+                      simpl. split. easy.
+                      exists "Carol"%string. right. easy.
+                   ** subst. exists [1;0]. exists [].
+                      simpl. split. easy.
+                      exists "Carol"%string. right. easy. 
+             ++ subst.
+                destruct H0 as [H0 | H0].
+                * assert(((n :: lis) ++ w') = n :: (lis++w')).
+                  { simpl. easy. }
+                  rewrite H1 in H0.
+                  apply spqn in H0.
+                  destruct H0 as [H0 | H0].
+                  ** destruct H0 as (Ha, Hb).
+                     subst. simpl in H7.
+                     destruct Hb as [Hb | Hb].
+                     *** destruct Hb as (Hb1,(Hb2,Hb3)).
+                         subst.
+                         assert(lis = [] /\ w' = []).
+                         { apply bnil. easy. }
+                         destruct H0 as (H0a,H0b).
+                         subst. simpl.
+                         inversion H7. subst.
+                         exists 0.
+                         intros.
+                         destruct H0 as [H0 | H0].
+                         **** apply endP in H0. 
+                              destruct H0 as [H0 | H0].
+                              +++ inversion H0. subst.
+                                  exists []. exists [0;0].
+                                  simpl. split. easy.
+                                  exists "Carol"%string.
+                                  left. unfold G.
+                                  apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                                  simpl. easy.
+                                  constructor.
+                                  easy.
+                              +++ destruct H0 as (H0a,H0b).
+                                  assert(w' = []).
+                                  { apply length_zero_iff_nil. easy. } 
+                                  subst.
+                                  exists []. exists []. split. easy.
+                                  exists "Carol"%string.
+                                  left. unfold G.
+                                  apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                                  simpl. easy.
+                                  constructor.
+                         **** destruct Hb as (Hb1,(Hb2,Hb3)).
+                              subst.
+                              apply onenil in Hb1.
+                              destruct Hb1 as [(Hb1,Hb2) | (Hb1,Hb2)].
+                              +++ subst.
+                                  exists 0.
+                                  intros.
+                                  destruct H0 as [H0 | H0].
+                                  ++++ apply endP in H0.
+                                       destruct H0 as [H0 | H0].
+                                       **** inversion H0. subst.
+                                            exists []. exists [0]. split. easy.
+                                            exists "Alice"%string.
+                                            simpl. left.
+                                            apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                                            simpl. easy.
+                                            apply gmap_con with (st := snat) (gk :=  gtt_send "Carol" "Alice" [Some (snat, gtt_end)]).
+                                            simpl. easy.
+                                            constructor.
+                                            easy.
+                                       **** destruct H0 as (H0a,H0b).
+                                            assert(w' = []).
+                                            { apply length_zero_iff_nil. easy. } 
+                                            subst.
+                                            exists []. exists []. split. easy.
+                                            exists "Alice"%string.
+                                            left.
+                                            apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                                            simpl. easy.
+                                            apply gmap_con with (st := snat) (gk :=  gtt_send "Carol" "Alice" [Some (snat, gtt_end)]).
+                                            simpl. easy.
+                                            constructor.
+                              +++ subst. 
+                                  exists 0.
+                                  intros.
+                                  destruct H0 as [H0 | H0].
+                                  ++++ apply endP in H0.
+                                       destruct H0 as [H0 | H0].
+                                       inversion H0. subst.
+                                       exists [0]. exists [0].
+                                       simpl. split. easy.
+                                       exists "Alice"%string.
+                                       simpl. left.
+                                       apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                                       simpl. easy.
+                                       apply gmap_con with (st := snat) (gk :=  gtt_send "Carol" "Alice" [Some (snat, gtt_end)]).
+                                       simpl. easy.
+                                       constructor.
+                                       easy.
+                                       destruct H0 as (Ha,(t,Hb)).
+                                       assert(w' = []).
+                                       { apply length_zero_iff_nil. easy. } 
+                                       subst. simpl in Hb.
+                                       exists []. exists []. split. easy. simpl.
+                                       exists "Bob"%string.
+                                       right.
+                                       apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                                       simpl. easy.
+                                       constructor.
+                  ++ destruct H0 as (Ha, Hb).
+                     subst.
+                     simpl in H7.
+                     destruct Hb as [Hb | Hb].
+                     *** destruct Hb as (Hb1,(Hb2,Hb3)).
+                         subst.
+                         assert(lis = [] /\ w' = []).
+                         { apply bnil. easy. }
+                         destruct H0 as (H0a,H0b).
+                         subst. simpl.
+                         inversion H7. subst.
+                         exists 0.
+                         intros.
+                         destruct H0 as [H0 | H0].
+                         **** apply endP in H0. 
+                              destruct H0 as [H0 | H0].
+                              +++ easy.
+                                  inversion H0. subst.
+                                  exists []. exists [0;0].
+                                  simpl. split. easy.
+                                  exists "Carol"%string.
+                                  left. unfold G.
+                                  apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                                  simpl. easy.
+                                  constructor.
+                              +++ destruct H0 as (H0a,H0b).
+                                  assert(w' = []).
+                                  { apply length_zero_iff_nil. easy. } 
+                                  subst.
+                                  exists []. exists []. split. easy.
+                                  exists "Carol"%string.
+                                  left. unfold G.
+                                  apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                                  simpl. easy.
+                                  constructor.
+                         **** destruct Hb as (Hb1,(Hb2,Hb3)).
+                              subst.
+                              apply onenil in Hb1.
+                              destruct Hb1 as [(Hb1,Hb2) | (Hb1,Hb2)].
+                              +++ subst.
+                                  exists 0.
+                                  intros.
+                                  destruct H0 as [H0 | H0].
+                                  ++++ apply endP in H0.
+                                       destruct H0 as [H0 | H0].
+                                       **** easy.
+                                            inversion H0. subst.
+                                            exists []. exists [0]. split. easy.
+                                            exists "Alice"%string.
+                                            simpl. left.
+                                            apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                                            simpl. easy.
+                                            apply gmap_con with (st := snat) (gk :=  gtt_send "Carol" "Alice" [Some (snat, gtt_end)]).
+                                            simpl. easy.
+                                            constructor.
+                                       **** destruct H0 as (H0a,H0b).
+                                            assert(w' = []).
+                                            { apply length_zero_iff_nil. easy. } 
+                                            subst.
+                                            exists []. exists []. split. easy.
+                                            exists "Alice"%string.
+                                            left.
+                                            apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                                            simpl. easy.
+                                            apply gmap_con with (st := snat) (gk :=  gtt_send "Carol" "Alice" [Some (snat, gtt_end)]).
+                                            simpl. easy.
+                                            constructor.
+                              +++ subst. 
+                                  exists 0.
+                                  intros.
+                                  destruct H0 as [H0 | H0].
+                                  ++++ apply endP in H0.
+                                       destruct H0 as [H0 | H0].
+                                       easy.
+                                       inversion H0. subst.
+                                       exists [0]. exists [0].
+                                       simpl. split. easy.
+                                       exists "Alice"%string.
+                                       simpl. left.
+                                       apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                                       simpl. easy.
+                                       apply gmap_con with (st := snat) (gk :=  gtt_send "Carol" "Alice" [Some (snat, gtt_end)]).
+                                       simpl. easy.
+                                       constructor.
+                                       destruct H0 as (Ha,(t,Hb)).
+                                       assert(w' = []).
+                                       { apply length_zero_iff_nil. easy. } 
+                                       subst. simpl in Hb.
+                                       exists []. exists []. split. easy. simpl.
+                                       exists "Bob"%string.
+                                       right.
+                                       apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                                       simpl. easy.
+                                       constructor.
+               ++ assert(((n :: lis) ++ w') = n :: (lis++w')).
+                  { simpl. easy. }
+                  rewrite H1 in H0.
+                  apply spqn in H0.
+                  destruct H0 as [H0 | H0].
+                  ** destruct H0 as (Ha, Hb).
+                     subst. simpl in H7.
+                     destruct Hb as [Hb | Hb].
+                     *** destruct Hb as (Hb1,(Hb2,Hb3)).
+                         subst.
+                         assert(lis = [] /\ w' = []).
+                         { apply bnil. easy. }
+                         destruct H0 as (H0a,H0b).
+                         subst. simpl.
+                         inversion H7. subst.
+                         exists 0.
+                         intros.
+                         destruct H0 as [H0 | H0].
+                         **** apply endP in H0. 
+                              destruct H0 as [H0 | H0].
+                              +++ inversion H0. subst.
+                                  exists []. exists [0;0].
+                                  simpl. split. easy.
+                                  exists "Bob"%string.
+                                  right. unfold G.
+                                  apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                                  simpl. easy.
+                                  constructor.
+                                  easy.
+                              +++ destruct H0 as (H0a,H0b).
+                                  assert(w' = []).
+                                  { apply length_zero_iff_nil. easy. } 
+                                  subst.
+                                  exists []. exists []. split. easy.
+                                  exists "Bob"%string.
+                                  right. unfold G.
+                                  apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                                  simpl. easy.
+                                  constructor.
+                         **** destruct Hb as (Hb1,(Hb2,Hb3)).
+                              subst.
+                              apply onenil in Hb1.
+                              destruct Hb1 as [(Hb1,Hb2) | (Hb1,Hb2)].
+                              +++ subst.
+                                  exists 0.
+                                  intros.
+                                  destruct H0 as [H0 | H0].
+                                  ++++ apply endP in H0.
+                                       destruct H0 as [H0 | H0].
+                                       **** inversion H0. subst.
+                                            exists []. exists [0]. split. easy.
+                                            exists "Carol"%string.
+                                            simpl. right.
+                                            apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                                            simpl. easy.
+                                            apply gmap_con with (st := snat) (gk :=  gtt_send "Carol" "Alice" [Some (snat, gtt_end)]).
+                                            simpl. easy.
+                                            constructor.
+                                            easy.
+                                       **** destruct H0 as (H0a,H0b).
+                                            assert(w' = []).
+                                            { apply length_zero_iff_nil. easy. } 
+                                            subst.
+                                            exists []. exists []. split. easy.
+                                            exists "Carol"%string.
+                                            right.
+                                            apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                                            simpl. easy.
+                                            apply gmap_con with (st := snat) (gk :=  gtt_send "Carol" "Alice" [Some (snat, gtt_end)]).
+                                            simpl. easy.
+                                            constructor.
+                              +++ subst.
+                                  exists 1.
+                                  intros.
+                                  destruct H0 as [H0 | H0].
+                                  ++++ apply endP in H0.
+                                       destruct H0 as [H0 | H0].
+                                       inversion H0. subst.
+                                       exists [0]. exists [0].
+                                       simpl. split. easy.
+                                       exists "Carol"%string.
+                                       simpl. right.
+                                       apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                                       simpl. easy.
+                                       apply gmap_con with (st := snat) (gk :=  gtt_send "Carol" "Alice" [Some (snat, gtt_end)]).
+                                       simpl. easy.
+                                       constructor.
+                                       easy.
+                                       destruct H0 as (Ha,(t,Hb)).
+                                       simpl in Hb.
+                                       inversion Hb.
+                                       subst. simpl in H10. inversion H10. subst.
+                                       inversion H11. subst.
+                                       easy.
+                                       subst.
+                                       case_eq n; intros.
+                                       **** subst. simpl in H9. inversion H9. subst.
+                                            inversion H12. subst. 
+                                            exists [0]. exists []. 
+                                            split. easy.
+                                            exists "Carol"%string.
+                                            simpl. right.
+                                            apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                                            simpl. easy.
+                                            apply gmap_con with (st := snat) (gk :=  gtt_send "Carol" "Alice" [Some (snat, gtt_end)]).
+                                            simpl. easy.
+                                            constructor.
+                                            subst.
+                                            easy.
+                                      **** subst. simpl in H9. 
+                                           destruct n0; easy.
+                  ++ destruct H0 as (Ha, Hb).
+                     subst.
+                     simpl in H7.
+                     destruct Hb as [Hb | Hb].
+                     *** destruct Hb as (Hb1,(Hb2,Hb3)).
+                         subst.
+                         assert(lis = [] /\ w' = []).
+                         { apply bnil. easy. }
+                         destruct H0 as (H0a,H0b).
+                         subst. simpl.
+                         inversion H7. subst.
+                         exists 0.
+                         intros.
+                         destruct H0 as [H0 | H0].
+                         **** apply endP in H0. 
+                              destruct H0 as [H0 | H0].
+                              +++ easy.
+                                  inversion H0. subst.
+                                  exists []. exists [0;0].
+                                  simpl. split. easy.
+                                  exists "Bob"%string.
+                                  right. unfold G.
+                                  apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                                  simpl. easy.
+                                  constructor.
+                              +++ destruct H0 as (H0a,H0b).
+                                  assert(w' = []).
+                                  { apply length_zero_iff_nil. easy. } 
+                                  subst.
+                                  exists []. exists []. split. easy.
+                                  exists "Bob"%string.
+                                  right. unfold G.
+                                  apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                                  simpl. easy.
+                                  constructor.
+                         **** destruct Hb as (Hb1,(Hb2,Hb3)).
+                              subst.
+                              apply onenil in Hb1.
+                              destruct Hb1 as [(Hb1,Hb2) | (Hb1,Hb2)].
+                              +++ subst.
+                                  exists 0.
+                                  intros.
+                                  destruct H0 as [H0 | H0].
+                                  ++++ apply endP in H0.
+                                       destruct H0 as [H0 | H0].
+                                       **** easy.
+                                            inversion H0. subst.
+                                            exists []. exists [0]. split. easy.
+                                            exists "Carol"%string.
+                                            simpl. right.
+                                            apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                                            simpl. easy.
+                                            apply gmap_con with (st := snat) (gk :=  gtt_send "Carol" "Alice" [Some (snat, gtt_end)]).
+                                            simpl. easy.
+                                            constructor.
+                                       **** destruct H0 as (H0a,H0b).
+                                            assert(w' = []).
+                                            { apply length_zero_iff_nil. easy. } 
+                                            subst.
+                                            exists []. exists []. split. easy.
+                                            exists "Carol"%string.
+                                            right.
+                                            apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                                            simpl. easy.
+                                            apply gmap_con with (st := snat) (gk :=  gtt_send "Carol" "Alice" [Some (snat, gtt_end)]).
+                                            simpl. easy.
+                                            constructor.
+                              +++ subst. 
+                                  exists 1.
+                                  intros.
+                                  destruct H0 as [H0 | H0].
+                                  ++++ apply endP in H0.
+                                       destruct H0 as [H0 | H0].
+                                       easy.
+                                       inversion H0. subst.
+                                       exists [0]. exists [0].
+                                       simpl. split. easy.
+                                       exists "Carol"%string.
+                                       simpl. right.
+                                       apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                                       simpl. easy.
+                                       apply gmap_con with (st := snat) (gk :=  gtt_send "Carol" "Alice" [Some (snat, gtt_end)]).
+                                       simpl. easy.
+                                       constructor.
+                                       destruct H0 as (Ha,(t,Hb)).
+                                       inversion Hb. subst.
+                                       simpl in H10. inversion H10. subst.
+                                       inversion H11. subst. easy.
+                                       subst. 
+                                       case_eq n; intros.
+                                       **** subst. simpl in H9.
+                                            inversion H9. subst.
+                                            inversion H12. subst.
+                                            exists [0]. exists [].
+                                            simpl. split. easy.
+                                            exists "Carol"%string.
+                                            right.
+                                            apply gmap_con with (st := snat) (gk := gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+                                            simpl. easy.
+                                            apply gmap_con with (st := snat) (gk :=  gtt_send "Carol" "Alice" [Some (snat, gtt_end)]).
+                                            simpl. easy.
+                                            constructor.
+                                            subst.
+                                            case_eq n; intros.
+                                            ++++ subst. simpl in H13. inversion H13. subst. easy.
+                                            ++++ subst. easy.
+                                            subst. simpl in H9.
+                                            destruct n0; easy.
+Qed.
 
 Lemma wfgCG: wfgC G.
 Proof. unfold wfgC.
