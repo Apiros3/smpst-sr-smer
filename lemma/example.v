@@ -52,6 +52,22 @@ Proof. intros.
        destruct n. simpl in Hg1. easy. simpl in Hg1. easy.
 Qed.
 
+Lemma no_part_send_send: forall pt p q r s,
+  pt <> p ->
+  pt <> q ->
+  pt <> r ->
+  pt <> s ->
+  isgPartsC pt (gtt_send p q [Some (snat, gtt_send r s [Some (snat, gtt_end)])]) -> False.
+Proof. intros.
+       apply part_cont in H3; try easy.
+       destruct H3 as (n1,(s1,(g1,(Hg1,Hg2)))).
+       destruct n1. simpl in Hg1.
+       inversion Hg1. subst.
+       apply no_part_send in Hg2; try easy.
+       simpl in Hg1.
+       destruct n1. simpl in Hg1. easy. simpl in Hg1. easy.
+Qed.
+
 
 Lemma GPAlice: projectionC G "Alice" T'Alice.
 Proof. unfold G, T'Alice.
@@ -750,10 +766,6 @@ Qed.
 
 (*typing*)
 
-Print process.
-Print expr.
-Print value.
-
 Definition PAlice := p_send "Bob" 0 (e_val (vnat 50)) (p_recv "Carol" [Some (p_inact)] ).
 
 Lemma TypAlice: typ_proc nil nil PAlice TAlice.
@@ -840,14 +852,177 @@ Qed.
 
 Print session.
 
-Definition M := s_par (s_ind "Alice" PAlice) (s_par (s_ind "Bob" PBob) (s_ind "Carol" PCarol)).
+Definition M := s_par (s_par (s_ind "Alice" PAlice) (s_ind "Bob" PBob)) (s_ind "Carol" PCarol).
+
+Lemma pwf: forall pt : string, isgPartsC pt G -> InT pt M.
+Proof. intros.
+       case_eq (eqb pt "Alice"); intros.
+       rewrite String.eqb_eq in H0. subst.
+       unfold M.
+       unfold InT. simpl. left. easy.
+       rewrite String.eqb_neq in H0.
+       case_eq (eqb pt "Bob"); intros.
+       rewrite String.eqb_eq in H1. subst.
+       unfold InT. simpl. right. left. easy.
+       rewrite String.eqb_neq in H1.
+       case_eq (eqb pt "Carol"); intros.
+       rewrite String.eqb_eq in H2. subst.
+       unfold InT. simpl. right. right. left. easy.
+       rewrite String.eqb_neq in H2.
+       apply part_cont in H; try easy.
+       destruct H as (n,(s,(g,(Ha,Hb)))).
+       revert pt H0 H1 H2 Hb. revert s g Ha.
+       induction n; intros.
+       - simpl in Ha.
+         inversion Ha. subst. apply no_part_send_send in Hb; try easy.
+         simpl in Ha.
+       - destruct n. simpl in Ha. inversion Ha.
+         subst. apply no_part_send_send in Hb; try easy.
+         simpl in Ha.
+         destruct n. simpl in Ha. easy. simpl in Ha. easy.
+Qed.
+
+Lemma balG: balancedG G.
+Proof. Admitted.
+
+Lemma wfgCG: wfgC G.
+Proof. unfold wfgC.
+       unfold G.
+       exists((g_send "Alice" "Bob"
+         [Some (snat, g_send "Bob" "Carol" [Some (snat, g_send "Carol" "Alice" [Some (snat, g_end)])]);
+          Some (snat, g_send "Bob" "Carol" [Some (snat, g_send "Carol" "Alice" [Some (snat, g_end)])])])).
+       split.
+       pfold. constructor.
+       constructor.
+       right.
+       exists snat.
+       exists(g_send "Bob" "Carol" [Some (snat, g_send "Carol" "Alice" [Some (snat, g_end)])]).
+       exists(gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+       split. easy. split. easy.
+       left. pfold.
+       constructor.
+       constructor.
+       right.
+       exists snat.
+       exists(g_send "Carol" "Alice" [Some (snat, g_end)]).
+       exists(gtt_send "Carol" "Alice" [Some (snat, gtt_end)]).
+       split. easy. split. easy.
+       left. pfold. 
+       constructor.
+       constructor.
+       right. exists snat.
+       exists g_end.
+       exists gtt_end.
+       split. easy. split. easy.
+       left. pfold. constructor.
+       constructor.
+       constructor.
+       constructor.
+       right.
+       exists snat.
+       exists(g_send "Bob" "Carol" [Some (snat, g_send "Carol" "Alice" [Some (snat, g_end)])]).
+       exists(gtt_send "Bob" "Carol" [Some (snat, gtt_send "Carol" "Alice" [Some (snat, gtt_end)])]).
+       split. easy. split. easy.
+       left. pfold.
+       constructor.
+       constructor.
+       right.
+       exists snat.
+       exists(g_send "Carol" "Alice" [Some (snat, g_end)]).
+       exists(gtt_send "Carol" "Alice" [Some (snat, gtt_end)]).
+       split. easy. split. easy.
+       left. pfold. 
+       constructor.
+       constructor.
+       right. exists snat.
+       exists g_end.
+       exists gtt_end.
+       split. easy. split. easy.
+       left. pfold. constructor.
+       constructor.
+       constructor.
+       constructor.
+       split.
+       constructor. simpl. easy. easy.
+       constructor. right.
+       exists snat.
+       exists( g_send "Bob" "Carol" [Some (snat, g_send "Carol" "Alice" [Some (snat, g_end)])]).
+       split. easy.
+       constructor.
+       simpl. easy. easy.
+       constructor. right.
+       exists snat.
+       exists(g_send "Carol" "Alice" [Some (snat, g_end)]).
+       split. easy.
+       constructor. easy. easy.
+       constructor. right.
+       exists snat. exists g_end.
+       split. easy. constructor.
+       constructor.
+       constructor.
+       constructor.
+       right. 
+       exists snat.
+       exists( g_send "Bob" "Carol" [Some (snat, g_send "Carol" "Alice" [Some (snat, g_end)])]).
+       split. easy.
+       constructor.
+       simpl. easy. easy.
+       constructor. right.
+       exists snat.
+       exists(g_send "Carol" "Alice" [Some (snat, g_end)]).
+       split. easy.
+       constructor. easy. easy.
+       constructor. right.
+       exists snat. exists g_end.
+       split. easy. constructor.
+       constructor.
+       constructor.
+       constructor.
+       split.
+       intro n. exists 0.
+       destruct n; constructor.
+       constructor. right.
+       exists snat.
+       exists(g_send "Bob" "Carol" [Some (snat, g_send "Carol" "Alice" [Some (snat, g_end)])]).
+       split. easy.
+       destruct n; constructor.
+       constructor.
+       right. exists snat. 
+       exists(g_send "Carol" "Alice" [Some (snat, g_end)]).
+       split. easy.
+       destruct n; constructor.
+       constructor. right.
+       exists snat.
+       exists g_end.
+       split. easy. constructor.
+       constructor.
+       constructor.
+       constructor.
+       right.
+       exists snat.
+       exists(g_send "Bob" "Carol" [Some (snat, g_send "Carol" "Alice" [Some (snat, g_end)])]).
+       split. easy.
+       destruct n; constructor.
+       constructor.
+       right. exists snat. 
+       exists(g_send "Carol" "Alice" [Some (snat, g_end)]).
+       split. easy.
+       destruct n; constructor.
+       constructor. right.
+       exists snat.
+       exists g_end.
+       split. easy. constructor.
+       constructor.
+       constructor.
+       constructor.
+       
+       apply balG.
+Qed.
 
 Lemma TypM: typ_sess M G.
 Proof. constructor.
-       
-       unfold G.
-       admit.
-       admit.
+       apply wfgCG.
+       apply pwf.
        
        unfold M.
        simpl.
@@ -862,6 +1037,7 @@ Proof. constructor.
      
        
        unfold G, M.
+       constructor.
        constructor.
        constructor.
        exists T'Alice.
@@ -963,7 +1139,6 @@ Proof. constructor.
        constructor.
          
        constructor.
-       constructor.
        exists TBob.
        split.
        apply GPBob.
@@ -1005,39 +1180,45 @@ Proof. constructor.
        destruct n; constructor.
        constructor.
        constructor.
-Admitted.
+Qed.
 
+Definition P'Alice := p_recv "Carol" [Some (p_inact)].
 
+Definition P'Bob := p_send "Carol" 0 (e_val (vnat 100)) (p_inact).
 
+Definition M' := s_par (s_par (s_ind "Alice" P'Alice) (s_ind "Bob" P'Bob)) (s_ind "Carol" PCarol).
 
+Lemma redM: betaP M M'.
+Proof. unfold M, M', PAlice, P'Alice, PBob, P'Bob.
+       specialize(r_struct
+       M
+       (s_par (s_par (s_ind "Bob" PBob) (s_ind "Alice" PAlice)) (s_ind "Carol" PCarol))
+       M'
+       (s_par (s_par (s_ind "Bob" P'Bob) (s_ind "Alice" P'Alice)) (s_ind "Carol" PCarol))
+       ); intro HR.
+       apply HR.
+       unfold M.
+       apply pc_par1m.
+       unfold M.
+       apply pc_par1m.
 
+       unfold M, M', PAlice, P'Alice, PBob, P'Bob.
+       specialize(r_comm "Bob" "Alice"
+         ([Some (p_send "Carol" 0 (e_val (vnat 100)) p_inact); Some (p_send "Carol" 0 (e_val (vnat 2)) p_inact)])
+         (p_send "Carol" 0 (e_val (vnat 100)) p_inact)
+         0 (e_val (vnat 50)) (vnat 50)
+         (p_recv "Carol" [Some p_inact])
+          ("Carol" <-- PCarol)
+       ); intro HC.
+       simpl in HC.
+       apply HC.
+       easy.
+       constructor.
+Qed.
 
+Lemma SRExa: exists G', typ_sess M' G' /\ multiC G G'.
+Proof. apply sub_red with (M := M).
+       apply TypM.
+       apply redM.
+Qed.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-       
