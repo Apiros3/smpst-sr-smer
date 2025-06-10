@@ -77,5 +77,6 @@
 | 25 | `lemma/projection.v` | Lemmas regarding projections after global trees take a step | 
 | 26 | `lemma/main_helper.v` | Helper functions for main theorems |
 | 27 | `lemma/main.v` | Main Theorems |
+| 28 | `lemma/example.v` | Proof of Example 3.17 from the paper "Precise subtyping for synchronous multiparty sessions" |
 
 ---
