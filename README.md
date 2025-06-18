@@ -28,7 +28,7 @@
 
 ## Shell Instructions
 
-1. Fetch the code from [here](https://anonymous.4open.science/r/smpst-sr-smer-4563/README.md).
+1. Fetch the code from [here](https://github.com/Apiros3/smpst-sr-smer).
 2. Open a terminal.
 3. Navigate to the directory containing the code using the `cd` command.
 4. Run: `eval $(opam env)` to update the shell environment for Coq.
